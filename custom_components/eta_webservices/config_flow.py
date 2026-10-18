@@ -9,7 +9,7 @@ import time
 
 import voluptuous as vol
 
-from homeassistant.config_entries import CONN_CLASS_CLOUD_POLL, ConfigFlow, OptionsFlow
+from homeassistant.config_entries import ConfigEntryState, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import callback
 from homeassistant.helpers import selector
@@ -335,7 +335,6 @@ class EtaFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for Eta."""
 
     VERSION = 8
-    CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
 
     def __init__(self) -> None:
         """Initialize."""
@@ -676,11 +675,10 @@ class EtaOptionsFlowHandler(OptionsFlow):
 
     def _get_runtime_config(self) -> dict | None:
         """Return the loaded runtime config for this entry if available."""
-        domain_data = self.hass.data.get(DOMAIN, {})
         config_entry = self.config_entry
-        if config_entry is None:
+        if config_entry.state is not ConfigEntryState.LOADED:
             return None
-        return domain_data.get(config_entry.entry_id)
+        return config_entry.runtime_data
 
     async def _get_possible_endpoints_with_progress(
         self, host, port, force_legacy_mode, progress_callback=None

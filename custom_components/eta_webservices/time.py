@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import time
 import logging
 
-from homeassistant import config_entries
 from homeassistant.components.time import ENTITY_ID_FORMAT, TimeEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
@@ -15,11 +14,10 @@ from .api import ETAEndpoint
 from .const import (
     CHOSEN_WRITABLE_SENSORS,
     CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT,
-    DOMAIN,
     WRITABLE_DICT,
     WRITABLE_UPDATE_COORDINATOR,
 )
-from .coordinator import ETAWritableUpdateCoordinator
+from .coordinator import EtaConfigEntry, ETAWritableUpdateCoordinator
 from .entity import EtaCoordinatedSensorEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,11 +25,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities,
 ):
     """Setup time sensors from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
 
     coordinator = config[WRITABLE_UPDATE_COORDINATOR]
 

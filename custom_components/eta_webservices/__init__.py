@@ -6,7 +6,8 @@ from typing import Any
 
 from homeassistant import config_entries, core
 from homeassistant.const import Platform
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import config_validation as cv, entity_registry as er
+from homeassistant.helpers.typing import ConfigType
 
 from .config_flow import EtaFlowHandler
 from .const import (
@@ -34,6 +35,7 @@ from .const import (
     WRITABLE_UPDATE_COORDINATOR,
 )
 from .coordinator import (
+    EtaConfigEntry,
     ETAErrorUpdateCoordinator,
     ETAPendingNodeCoordinator,
     ETASensorUpdateCoordinator,
@@ -53,11 +55,17 @@ PLATFORMS: list[Platform] = [
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+async def async_setup(hass: core.HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration-wide services."""
+    await async_setup_services(hass)
+    return True
+
+
+async def async_setup_entry(hass: core.HomeAssistant, entry: EtaConfigEntry) -> bool:
     """Set up platform from a ConfigEntry."""
-    hass.data.setdefault(DOMAIN, {})
     config = dict(entry.data)
     # Registers update listener to update config entry when options are updated.
     entry.async_on_unload(entry.add_update_listener(options_update_listener))
@@ -75,9 +83,9 @@ async def async_setup_entry(
     # so startup and periodic updates cannot overload slower ETA units.
     config[REQUEST_SEMAPHORE] = asyncio.Semaphore(config[MAX_PARALLEL_REQUESTS])
 
-    error_coordinator = ETAErrorUpdateCoordinator(hass, config)
-    sensor_coordinator = ETASensorUpdateCoordinator(hass, config)
-    writable_coordinator = ETAWritableUpdateCoordinator(hass, config)
+    error_coordinator = ETAErrorUpdateCoordinator(hass, config, entry)
+    sensor_coordinator = ETASensorUpdateCoordinator(hass, config, entry)
+    writable_coordinator = ETAWritableUpdateCoordinator(hass, config, entry)
     pending_coordinator = ETAPendingNodeCoordinator(hass, config, entry)
     config[ERROR_UPDATE_COORDINATOR] = error_coordinator
     config[SENSOR_UPDATE_COORDINATOR] = sensor_coordinator
@@ -89,7 +97,7 @@ async def async_setup_entry(
     await sensor_coordinator.async_config_entry_first_refresh()
     await writable_coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = config
+    entry.runtime_data = config
 
     # Forward the setup to the sensor platform.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -98,8 +106,6 @@ async def async_setup_entry(
     # options_update_listener (registered above) is already in place before
     # any promotion fires and updates the options.
     hass.async_create_task(pending_coordinator.async_refresh())
-
-    await async_setup_services(hass, entry)
 
     return True
 
@@ -225,14 +231,6 @@ async def options_update_listener(
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
-async def async_unload_entry(
-    hass: core.HomeAssistant, entry: config_entries.ConfigEntry
-) -> bool:
+async def async_unload_entry(hass: core.HomeAssistant, entry: EtaConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    if unload_ok:
-        # Remove config entry from domain.
-        hass.data[DOMAIN].pop(entry.entry_id)
-
-    return unload_ok
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

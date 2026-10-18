@@ -123,6 +123,10 @@
             "name": "Wert setzen",
             "description": "Setzt den Wert eines Endpunkts (Achtung: Nur unter großer Vorsicht verwenden! Ein falscher Wert kann das ETA Gerät unbrauchbar machen.)",
             "fields": {
+                "config_entry_id": {
+                    "name": "ETA-System",
+                    "description": "Das ETA-System, auf das geschrieben wird. Nur nötig, wenn mehrere ETA-Systeme eingerichtet sind."
+                },
                 "endpoint_url": {
                     "name": "Endpunkt URI",
                     "description": "URI des Endpunkts (nur die Zahlenfolge, ohne Host und Port) (siehe http://[eta_host]:[eta_port]/user/menu)"

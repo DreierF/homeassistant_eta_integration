@@ -3,24 +3,23 @@
 from __future__ import annotations
 
 from homeassistant.components.button import ENTITY_ID_FORMAT, ButtonEntity
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import generate_entity_id
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN, ERROR_UPDATE_COORDINATOR
-from .coordinator import ETAErrorUpdateCoordinator
+from .const import ERROR_UPDATE_COORDINATOR
+from .coordinator import EtaConfigEntry, ETAErrorUpdateCoordinator
 from .utils import create_device_info
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Setup button."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
     error_coordinator = config[ERROR_UPDATE_COORDINATOR]
 
     buttons = [

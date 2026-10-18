@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant import config_entries
 from homeassistant.components.binary_sensor import (
     ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
@@ -14,8 +13,8 @@ from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import generate_entity_id
 
-from .const import DOMAIN, ERROR_UPDATE_COORDINATOR
-from .coordinator import ETAErrorUpdateCoordinator
+from .const import ERROR_UPDATE_COORDINATOR
+from .coordinator import EtaConfigEntry, ETAErrorUpdateCoordinator
 from .entity import EtaErrorEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -23,11 +22,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities,
 ):
     """Setup binary sensor."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
 
     error_coordinator = config[ERROR_UPDATE_COORDINATOR]
 

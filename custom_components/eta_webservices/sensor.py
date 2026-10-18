@@ -16,7 +16,6 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant import config_entries
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     ENTITY_ID_FORMAT,
@@ -49,7 +48,11 @@ from .const import (
     WRITABLE_DICT,
     WRITABLE_UPDATE_COORDINATOR,
 )
-from .coordinator import ETAErrorUpdateCoordinator, ETASensorUpdateCoordinator
+from .coordinator import (
+    EtaConfigEntry,
+    ETAErrorUpdateCoordinator,
+    ETASensorUpdateCoordinator,
+)
 from .entity import EtaCoordinatedSensorEntity, EtaErrorEntity
 from .utils import get_native_unit
 
@@ -100,11 +103,11 @@ def _deduplicate_entities_by_unique_id(
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities,
 ):
     """Setup sensors from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
 
     sensor_coordinator = config[SENSOR_UPDATE_COORDINATOR]
     writable_coordinator = config[WRITABLE_UPDATE_COORDINATOR]

@@ -163,7 +163,7 @@ async def _run_test(
         config[ERROR_UPDATE_COORDINATOR] = error_coordinator
 
         config_entry = MockConfigEntry(domain=DOMAIN, entry_id=entry_id)
-        hass.data.setdefault(DOMAIN, {})[entry_id] = config
+        config_entry.runtime_data = config
 
         all_entities = []
 

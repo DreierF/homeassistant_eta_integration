@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -12,17 +11,17 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .api import EtaAPI
 from .const import (
     DEFAULT_MAX_PARALLEL_REQUESTS,
-    DOMAIN,
     MAX_PARALLEL_REQUESTS,
     REQUEST_SEMAPHORE,
 )
+from .coordinator import EtaConfigEntry
 
 
 async def async_get_config_entry_diagnostics(
-    hass: HomeAssistant, entry: ConfigEntry
+    hass: HomeAssistant, entry: EtaConfigEntry
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
-    config = hass.data[DOMAIN][entry.entry_id]
+    config = entry.runtime_data
 
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)

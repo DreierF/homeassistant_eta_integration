@@ -123,6 +123,10 @@
             "name": "Set value",
             "description": "Sets the value of an endpoint (Attention: Exercise caution! A wrong value can render your ETA unit unusable.)",
             "fields": {
+                "config_entry_id": {
+                    "name": "ETA system",
+                    "description": "The ETA system to write to. Only needed when more than one ETA system is set up."
+                },
                 "endpoint_url": {
                     "name": "Endpoint URI",
                     "description": "URI of the endpoint (only the numeric part, without host and port) (see http://[eta_host]:[eta_port]/user/menu)"

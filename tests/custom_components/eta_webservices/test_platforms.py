@@ -111,7 +111,7 @@ async def test_all_writable_sensors_handled(hass: HomeAssistant, load_fixture):
 
     entry_id = "test_entry_id"
     config_entry = MockConfigEntry(domain=DOMAIN, entry_id=entry_id)
-    hass.data.setdefault(DOMAIN, {})[entry_id] = config
+    config_entry.runtime_data = config
 
     # Capture entities passed to async_add_entities across all platforms
     all_entities = []
@@ -185,7 +185,7 @@ async def test_all_non_writable_sensors_handled(hass: HomeAssistant, load_fixtur
 
     entry_id = "test_entry_id_non_writable"
     config_entry = MockConfigEntry(domain=DOMAIN, entry_id=entry_id)
-    hass.data.setdefault(DOMAIN, {})[entry_id] = config
+    config_entry.runtime_data = config
 
     all_entities = []
 
@@ -274,7 +274,7 @@ async def test_all_writable_and_non_writable_sensors_handled(
 
     entry_id = "test_entry_id_combined"
     config_entry = MockConfigEntry(domain=DOMAIN, entry_id=entry_id)
-    hass.data.setdefault(DOMAIN, {})[entry_id] = config
+    config_entry.runtime_data = config
 
     all_entities = []
 
@@ -336,7 +336,7 @@ async def test_sensor_platform_skips_duplicate_unique_ids(
 
     entry_id = "test_entry_id_duplicate_unique_id"
     config_entry = MockConfigEntry(domain=DOMAIN, entry_id=entry_id)
-    hass.data.setdefault(DOMAIN, {})[entry_id] = config
+    config_entry.runtime_data = config
 
     all_entities = []
 

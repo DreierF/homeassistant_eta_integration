@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import logging
 
-from homeassistant import config_entries
 from homeassistant.components.switch import ENTITY_ID_FORMAT, SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import ETAEndpoint
-from .const import CHOSEN_SWITCHES, DOMAIN, SENSOR_UPDATE_COORDINATOR, SWITCHES_DICT
-from .coordinator import ETASensorUpdateCoordinator
+from .const import CHOSEN_SWITCHES, SENSOR_UPDATE_COORDINATOR, SWITCHES_DICT
+from .coordinator import EtaConfigEntry, ETASensorUpdateCoordinator
 from .entity import EtaEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,11 +19,11 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities,
 ):
     """Setup switches from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
     coordinator = config[SENSOR_UPDATE_COORDINATOR]
 
     chosen_entities = config[CHOSEN_SWITCHES]

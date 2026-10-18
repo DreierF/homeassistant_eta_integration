@@ -6,7 +6,6 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant import config_entries
 from homeassistant.components.number import (
     ENTITY_ID_FORMAT,
     NumberDeviceClass,
@@ -25,12 +24,11 @@ from .const import (
     ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION,
     CHOSEN_WRITABLE_SENSORS,
     CUSTOM_UNIT_UNITLESS,
-    DOMAIN,
     INVISIBLE_UNITS,
     WRITABLE_DICT,
     WRITABLE_UPDATE_COORDINATOR,
 )
-from .coordinator import ETAWritableUpdateCoordinator
+from .coordinator import EtaConfigEntry, ETAWritableUpdateCoordinator
 from .entity import EtaCoordinatedSensorEntity
 from .utils import get_native_unit
 
@@ -44,11 +42,11 @@ WRITE_VALUE_SCALED_SCHEMA: VolDictType = {
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: config_entries.ConfigEntry,
+    config_entry: EtaConfigEntry,
     async_add_entities,
 ):
     """Setup sensors from a config entry created in the integrations UI."""
-    config = hass.data[DOMAIN][config_entry.entry_id]
+    config = config_entry.runtime_data
 
     coordinator = config[WRITABLE_UPDATE_COORDINATOR]
 
