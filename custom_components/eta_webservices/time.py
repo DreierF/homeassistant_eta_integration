@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import time
 import logging
 
-from homeassistant.components.time import ENTITY_ID_FORMAT, TimeEntity
+from homeassistant.components.time import TimeEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -55,9 +55,7 @@ class EtaTime(TimeEntity, EtaCoordinatedSensorEntity[str]):
     ) -> None:
         _LOGGER.debug("ETA Integration - init time sensor")
 
-        super().__init__(
-            coordinator, config, hass, unique_id, endpoint_info, ENTITY_ID_FORMAT
-        )
+        super().__init__(coordinator, config, hass, unique_id, endpoint_info)
 
         self._attr_entity_category = EntityCategory.CONFIG
 

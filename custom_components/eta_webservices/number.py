@@ -6,12 +6,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.number import (
-    ENTITY_ID_FORMAT,
-    NumberDeviceClass,
-    NumberEntity,
-    NumberMode,
-)
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
@@ -82,9 +77,7 @@ class EtaWritableNumberSensor(NumberEntity, EtaCoordinatedSensorEntity[float]):
     ) -> None:
         _LOGGER.debug("ETA Integration - init writable number sensor")
 
-        super().__init__(
-            coordinator, config, hass, unique_id, endpoint_info, ENTITY_ID_FORMAT
-        )
+        super().__init__(coordinator, config, hass, unique_id, endpoint_info)
 
         self.ignore_decimal_places_restriction = unique_id in config.get(
             ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION, []

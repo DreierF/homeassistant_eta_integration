@@ -2,32 +2,40 @@
 
 from homeassistant.helpers.device_registry import DeviceInfo
 
+from ._api.api_client import endpoint_key  # noqa: F401
 from .const import CUSTOM_UNIT_UNITLESS, DOMAIN
 
 
-def create_device_info(host: str, port: str, device_name: str | None) -> DeviceInfo:
-    """Create a common DeviceInfo object."""
+def entity_unique_id(entry_id: str, key: str) -> str:
+    """Return the unique_id of the entity for an endpoint key of a config entry."""
+    return f"{entry_id}_{key}"
 
-    # If no device name is provided fall back to the old style
-    # This makes sure that meta-entities (error sensors) show up in the old "ETA" device,
-    # while all other entities are grouped in a new device with the provided name (e.g. "ETA Living Room").
 
-    # We have to assign a prefix ("ETA > ") because if we just used the device_name,
-    # the Home Assistant UI would automatically strip this name from all entity names.
-    # E.g. "Kessel > Kessel" would be shown as "> Kessel"
-    # This is sone in the frontend with no way to disable this.
-    eta_device_name = f"ETA > {device_name}" if device_name else "ETA"
+def endpoint_key_from_unique_id(entry_id: str, unique_id: str) -> str | None:
+    """Return the endpoint key of an entity unique_id, None if it is no endpoint entity."""
+    prefix = f"{entry_id}_"
+    return unique_id.removeprefix(prefix) if unique_id.startswith(prefix) else None
 
+
+def create_device_info(entry_id: str, device_name: str | None) -> DeviceInfo:
+    """Create the DeviceInfo for the ETA terminal or one of its functional blocks.
+
+    Entities without a functional block, like the error sensors, belong to the
+    terminal itself; all others belong to a device per functional block (e.g.
+    "Kessel") that is linked to the terminal.
+    """
+    if device_name is None:
+        return DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name="ETA",
+            manufacturer="ETA",
+            configuration_url="https://www.meineta.at",
+        )
     return DeviceInfo(
-        identifiers={
-            (
-                DOMAIN,
-                f"eta_{host.replace('.', '_')}_{port}{'_' + device_name if device_name else ''}",
-            )
-        },
-        name=eta_device_name,
+        identifiers={(DOMAIN, f"{entry_id}_{device_name}")},
+        name=device_name,
         manufacturer="ETA",
-        configuration_url="https://www.meineta.at",
+        via_device=(DOMAIN, entry_id),
     )
 
 

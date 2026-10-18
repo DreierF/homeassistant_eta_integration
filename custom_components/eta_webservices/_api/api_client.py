@@ -22,6 +22,15 @@ def resource_path(resource: str, uri: str) -> str:
     return f"{resource}/{str(uri).lstrip('/')}"
 
 
+def endpoint_key(uri: str) -> str:
+    """Return the key identifying an endpoint, e.g. 120_10021_0_0_12080.
+
+    The key is derived from the CAN address, which unlike the menu names does
+    not depend on the terminal language or firmware wording.
+    """
+    return uri.strip("/").replace("/", "_")
+
+
 class APIClient:
     """Handles low-level HTTP and XML operations for ETA API."""
 

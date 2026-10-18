@@ -37,5 +37,4 @@ This script will open the fixture file and replace all escaped unicode sequences
 All fixture files have already been converted, so this script should not be needed any more.
 
 ```
-./convert_unicode.py ../fixtures/v5_config_data.json
 ```

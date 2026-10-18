@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
 from custom_components.eta_webservices.const import (
+    ENTRY_ID,
     ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION,
 )
 from custom_components.eta_webservices.number import EtaWritableNumberSensor
@@ -48,6 +49,7 @@ def _make_endpoint_info(
 def _make_config(ignore_ids=None):
     return {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION: ignore_ids or [],
     }

@@ -35,7 +35,7 @@
             "discover_entities": "Dein ETA-System wird nach verfügbaren Entitäten durchsucht. Das kann bei großen Anlagen mehrere Minuten dauern. Home Assistant fährt automatisch fort, sobald die Suche abgeschlossen ist."
         },
         "abort": {
-            "single_instance_allowed": "Host bereits konfiguriert. Nur eine Instanz ist erlaubt."
+            "already_configured": "Dieses ETA-System ist bereits eingerichtet."
         }
     },
     "options": {

@@ -12,7 +12,7 @@ from ..const import (  # noqa: TID252
     CUSTOM_UNIT_UNITLESS,
     CUSTOM_UNITS,
 )
-from .api_client import resource_path
+from .api_client import endpoint_key, resource_path
 from .sensor_discovery_base import SensorDiscoveryBase
 from .types import WRITABLE_SENSOR_UNITS, ETAEndpoint, ETAValidWritableValues
 
@@ -476,19 +476,14 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
                     )
 
         self._emit_progress("Classifying discovered entities", 0.95)
-        for uri, key in deduplicated_uris.items():
+        for uri in deduplicated_uris:
             if uri not in endpoint_infos:
                 continue
 
             endpoint_info = endpoint_infos[uri]
 
             try:
-                unique_key = (
-                    "eta_"
-                    + self._http.host.replace(".", "_")
-                    + "_"
-                    + key.lower().replace(" ", "_")
-                )
+                unique_key = endpoint_key(uri)
 
                 if uri in data_results:
                     data_result = data_results[uri]

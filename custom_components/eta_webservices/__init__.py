@@ -2,36 +2,23 @@
 
 import asyncio
 import logging
-from typing import Any
 
 from homeassistant import config_entries, core
 from homeassistant.const import Platform
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.typing import ConfigType
 
-from .config_flow import EtaFlowHandler
 from .const import (
-    CHOSEN_FLOAT_SENSORS,
-    CHOSEN_PENDING_SENSORS,
-    CHOSEN_TEXT_SENSORS,
-    CHOSEN_WRITABLE_SENSORS,
-    CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT,
-    CUSTOM_UNIT_TIMESLOT,
-    CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
     DEFAULT_MAX_PARALLEL_REQUESTS,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    ENTRY_ID,
     ERROR_UPDATE_COORDINATOR,
-    FLOAT_DICT,
-    FORCE_LEGACY_MODE,
     MAX_PARALLEL_REQUESTS,
-    PENDING_DICT,
     PENDING_UPDATE_COORDINATOR,
     REQUEST_SEMAPHORE,
     SENSOR_UPDATE_COORDINATOR,
-    TEXT_DICT,
     UPDATE_INTERVAL,
-    WRITABLE_DICT,
     WRITABLE_UPDATE_COORDINATOR,
 )
 from .coordinator import (
@@ -42,6 +29,7 @@ from .coordinator import (
     ETAWritableUpdateCoordinator,
 )
 from .services import async_setup_services
+from .utils import create_device_info
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -82,6 +70,14 @@ async def async_setup_entry(hass: core.HomeAssistant, entry: EtaConfigEntry) -> 
     # Share one limiter across all API users of this config entry
     # so startup and periodic updates cannot overload slower ETA units.
     config[REQUEST_SEMAPHORE] = asyncio.Semaphore(config[MAX_PARALLEL_REQUESTS])
+    config[ENTRY_ID] = entry.entry_id
+
+    # Register the terminal before the platforms, as the devices of the
+    # functional blocks reference it via via_device.
+    dr.async_get(hass).async_get_or_create(
+        config_entry_id=entry.entry_id,
+        **create_device_info(entry.entry_id, None),
+    )
 
     error_coordinator = ETAErrorUpdateCoordinator(hass, config, entry)
     sensor_coordinator = ETASensorUpdateCoordinator(hass, config, entry)
@@ -107,120 +103,6 @@ async def async_setup_entry(hass: core.HomeAssistant, entry: EtaConfigEntry) -> 
     # any promotion fires and updates the options.
     hass.async_create_task(pending_coordinator.async_refresh())
 
-    return True
-
-
-async def async_migrate_entry(  # noqa: D103
-    hass: core.HomeAssistant, config_entry: config_entries.ConfigEntry
-):
-    # Move all sensors with the custom CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT unit
-    # from the list of float sensors to the list of text sensors
-    # also make sure to move currently selected sensors
-    def migrate_to_v6(new_data: dict[str, Any]):
-        # Merge the options with the initial data to make sure we operate on the most recent data
-
-        chosen_custom_unit_sensors = [
-            entry
-            for entry in new_data[CHOSEN_FLOAT_SENSORS]
-            if new_data[FLOAT_DICT][entry]["unit"] == CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT
-        ]
-        # remove sensors with custom units from the CHOSEN_FLOAT_SENSORS list
-        new_data[CHOSEN_FLOAT_SENSORS] = [
-            entry
-            for entry in new_data[CHOSEN_FLOAT_SENSORS]
-            if entry not in chosen_custom_unit_sensors
-        ]
-        # and add them to the CHOSEN_TEXT_SENSORS list instead
-        new_data[CHOSEN_TEXT_SENSORS].extend(chosen_custom_unit_sensors)
-
-        # now do the same with the FLOAT_DICT dict
-        custom_unit_sensors = {
-            k: v
-            for k, v in new_data[FLOAT_DICT].items()
-            if v.get("unit", "") == CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT
-        }
-        # remove sensors with custom units from the FLOAT_DICT
-        new_data[FLOAT_DICT] = {
-            k: v
-            for k, v in new_data[FLOAT_DICT].items()
-            if k not in custom_unit_sensors
-        }
-        # and add them to the TEXT_DICT instead
-        new_data[TEXT_DICT].update(custom_unit_sensors)
-
-    def migrate_to_v7(new_data: dict[str, Any]):
-        new_data.setdefault(PENDING_DICT, {})
-        new_data.setdefault(CHOSEN_PENDING_SENSORS, [])
-
-    def migrate_to_v8(new_data: dict[str, Any]):
-        entity_registry = er.async_get(hass)
-        entities = er.async_entries_for_config_entry(
-            entity_registry, config_entry.entry_id
-        )
-        chosen_text_sensors = new_data[CHOSEN_TEXT_SENSORS]
-        chosen_writable_sensors = new_data[CHOSEN_WRITABLE_SENSORS]
-        to_be_disabled = [
-            entity
-            for entity in chosen_text_sensors
-            if new_data[TEXT_DICT][entity]["unit"]
-            in [CUSTOM_UNIT_TIMESLOT, CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE]
-            and entity + "_writable" in chosen_writable_sensors
-        ]
-        entities_to_disable = [
-            entity for entity in entities if entity.unique_id in to_be_disabled
-        ]
-        for entity_entry in entities_to_disable:
-            entity_registry.async_update_entity(
-                entity_entry.entity_id,
-                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
-            )
-
-    def _get_current_data():
-        current_data = config_entry.data.copy()
-        if config_entry.options:
-            current_data.update(config_entry.options)
-        return current_data
-
-    _LOGGER.debug("Migrating from version %s", config_entry.version)
-
-    current_version = config_entry.version
-    new_version = EtaFlowHandler.VERSION
-    new_data = _get_current_data()
-    is_migrated = False
-
-    if current_version == 1:
-        new_data[WRITABLE_DICT] = []
-        new_data[CHOSEN_WRITABLE_SENSORS] = []
-        current_version = 2
-        is_migrated = True
-    if current_version == 2:
-        new_data[FORCE_LEGACY_MODE] = False
-        current_version = 3
-        is_migrated = True
-    if current_version in (3, 4, 5):
-        migrate_to_v6(new_data)
-        current_version = 6
-        is_migrated = True
-    if current_version == 6:
-        migrate_to_v7(new_data)
-        current_version = 7
-        is_migrated = True
-    if current_version == 7:
-        migrate_to_v8(new_data)
-        current_version = 8
-        is_migrated = True
-    if is_migrated:
-        hass.config_entries.async_update_entry(
-            config_entry,
-            data=new_data,
-            options={},
-            version=new_version,
-        )
-    if not is_migrated:
-        _LOGGER.warning("No migration path to version %s found", new_version)
-        return True
-
-    _LOGGER.info("Migration to version %s successful", new_version)
     return True
 
 

@@ -5,13 +5,10 @@ from __future__ import annotations
 import logging
 
 from homeassistant.components.binary_sensor import (
-    ENTITY_ID_FORMAT,
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
-from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import generate_entity_id
 
 from .const import ERROR_UPDATE_COORDINATOR
 from .coordinator import EtaConfigEntry, ETAErrorUpdateCoordinator
@@ -42,20 +39,10 @@ class EtaErrorSensor(BinarySensorEntity, EtaErrorEntity):
     ) -> None:
         _LOGGER.debug("ETA Integration - init error sensor")
 
-        super().__init__(coordinator, config, hass, ENTITY_ID_FORMAT, "_errors")
+        super().__init__(coordinator, config, "errors")
 
-        self._attr_has_entity_name = True
         self._attr_translation_key = "state_sensor"
-
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
-
-        host = config.get(CONF_HOST, "")
-
-        # replace the unique id and entity id to keep the entity backwards compatible
-        self._attr_unique_id = "eta_" + host.replace(".", "_") + "_errors"
-        self.entity_id = generate_entity_id(
-            ENTITY_ID_FORMAT, self._attr_unique_id, hass=hass
-        )
 
         self.handle_data_updates(self.coordinator.data)
 

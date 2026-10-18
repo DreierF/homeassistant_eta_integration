@@ -8,7 +8,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from custom_components.eta_webservices.api import EtaAPI
 from custom_components.eta_webservices.coordinator import ETAPendingNodeCoordinator
-from custom_components.eta_webservices import async_migrate_entry
 from custom_components.eta_webservices.const import (
     CHOSEN_FLOAT_SENSORS,
     CHOSEN_PENDING_SENSORS,
@@ -143,8 +142,8 @@ async def test_pending_node_goes_to_pending_dict(load_fixture):
     assert len(pending_dict) == 1, f"Expected 1 pending node, got {len(pending_dict)}"
 
     pending_key = next(iter(pending_dict))
-    assert "restsauerstoff" in pending_key.lower(), (
-        f"Pending key should contain sensor name, got: {pending_key}"
+    assert pending_key == "40_10021_0_11108_0", (
+        f"Pending key should be derived from the endpoint URI, got: {pending_key}"
     )
     pending_entry = pending_dict[pending_key]
     assert pending_entry["url"] == PENDING_URI
@@ -459,8 +458,8 @@ async def test_pending_node_with_invalid_permission_error():
         f"Expected 1 pending node (IEEE-754 + Invalid permission), got {len(pending_dict)}"
     )
     pending_key = next(iter(pending_dict))
-    assert "restsauerstoff" in pending_key.lower(), (
-        f"Pending key should contain sensor name, got: {pending_key}"
+    assert pending_key == "40_10021_0_11108_0", (
+        f"Pending key should be derived from the endpoint URI, got: {pending_key}"
     )
     pending_entry = pending_dict[pending_key]
     assert pending_entry["url"] == PENDING_URI

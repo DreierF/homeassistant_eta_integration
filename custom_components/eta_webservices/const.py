@@ -64,6 +64,7 @@ INVISIBLE_UNITS = [
     CUSTOM_UNIT_UNITLESS,
 ]
 
+ENTRY_ID = "entry_id"
 MAX_PARALLEL_REQUESTS = "max_parallel_requests"
 REQUEST_SEMAPHORE = "request_semaphore"
 UPDATE_INTERVAL = "update_interval"

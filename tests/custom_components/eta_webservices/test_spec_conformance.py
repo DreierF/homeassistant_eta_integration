@@ -14,6 +14,7 @@ from custom_components.eta_webservices._api.sensor_discovery_v12 import (
 from custom_components.eta_webservices.api import EtaAPI
 from custom_components.eta_webservices.const import (
     CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
+    ENTRY_ID,
 )
 from custom_components.eta_webservices.number import EtaWritableNumberSensor
 from custom_components.eta_webservices.sensor import EtaTimeslotSensor
@@ -109,7 +110,7 @@ async def test_number_writes_raw_values(hass, endpoint_type, value, expected):
     coordinator.data = {"/120/10101/0/0/12345": 20.0}
     coordinator.async_refresh = AsyncMock()
     sensor = EtaWritableNumberSensor(
-        {"host": "192.168.0.25", "port": 8080},
+        {"host": "192.168.0.25", "port": 8080, ENTRY_ID: "test_entry_id"},
         hass,
         "boiler_temp",
         {
@@ -144,7 +145,7 @@ async def test_timeslot_write_with_zero_degrees(hass):
     coordinator.data = {"/120/10111/12130/0/1082": "00:00 - 12:00 40"}
     coordinator.async_refresh = AsyncMock()
     sensor = EtaTimeslotSensor(
-        {"host": "192.168.0.25", "port": 8080},
+        {"host": "192.168.0.25", "port": 8080, ENTRY_ID: "test_entry_id"},
         hass,
         "tank_slot",
         {

@@ -15,6 +15,7 @@ from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 
 from custom_components.eta_webservices.const import (
+    ENTRY_ID,
     ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION,
     CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT,
     CUSTOM_UNIT_TIMESLOT,
@@ -45,6 +46,7 @@ _OTHER_URL = "/other/url/456"
 def _make_config():
     return {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION: [],
     }

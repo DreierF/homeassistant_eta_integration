@@ -18,7 +18,6 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
-    ENTITY_ID_FORMAT,
     SensorDeviceClass,
     SensorEntity,
     SensorStateClass,
@@ -286,9 +285,7 @@ class EtaFloatSensor(SensorEntity, EtaCoordinatedSensorEntity[float]):
     ) -> None:
         _LOGGER.debug("ETA Integration - init float sensor")
 
-        super().__init__(
-            coordinator, config, hass, unique_id, endpoint_info, ENTITY_ID_FORMAT
-        )
+        super().__init__(coordinator, config, hass, unique_id, endpoint_info)
 
         self._attr_device_class = _determine_device_class(endpoint_info["unit"])
 
@@ -325,9 +322,7 @@ class EtaTextSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
     ) -> None:
         _LOGGER.debug("ETA Integration - init text sensor")
 
-        super().__init__(
-            coordinator, config, hass, unique_id, endpoint_info, ENTITY_ID_FORMAT
-        )
+        super().__init__(coordinator, config, hass, unique_id, endpoint_info)
 
     def handle_data_updates(self, data: str | None) -> None:  # noqa: D102
         if data is None:
@@ -354,16 +349,14 @@ class EtaTimeslotSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
         _LOGGER.debug("ETA Integration - init timeslot sensor")
 
         self.temperature_unit = "°C"
-        super().__init__(
-            coordinator, config, hass, unique_id, endpoint_info, ENTITY_ID_FORMAT
-        )
+        super().__init__(coordinator, config, hass, unique_id, endpoint_info)
         self.valid_values: ETAValidWritableValues = endpoint_info["valid_values"]  # pyright: ignore[reportAttributeAccessIssue]
 
         if should_be_disabled:
             entity_registry = er.async_get(hass)
             # Remove the entity from the list of deleted entities to allow re-adding it as disabled
             entity_registry.deleted_entities.pop(
-                (SENSOR_DOMAIN, DOMAIN, unique_id), None
+                (SENSOR_DOMAIN, DOMAIN, self._attr_unique_id), None
             )
             self._attr_entity_registry_enabled_default = False
 
@@ -496,9 +489,7 @@ class EtaNbrErrorsSensor(SensorEntity, EtaErrorEntity):
     def __init__(  # noqa: D107
         self, config: dict, hass: HomeAssistant, coordinator: ETAErrorUpdateCoordinator
     ) -> None:
-        super().__init__(
-            coordinator, config, hass, ENTITY_ID_FORMAT, "_nbr_active_errors"
-        )
+        super().__init__(coordinator, config, "nbr_active_errors")
 
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._attr_state_class = SensorStateClass.MEASUREMENT
@@ -506,7 +497,6 @@ class EtaNbrErrorsSensor(SensorEntity, EtaErrorEntity):
         self._attr_native_value = 0
         self._attr_native_unit_of_measurement = None
 
-        self._attr_has_entity_name = True
         self._attr_translation_key = "nbr_active_errors_sensor"
 
         self.handle_data_updates(self.coordinator.data)
@@ -521,14 +511,13 @@ class EtaLatestErrorSensor(SensorEntity, EtaErrorEntity):
     def __init__(  # noqa: D107
         self, config: dict, hass: HomeAssistant, coordinator: ETAErrorUpdateCoordinator
     ) -> None:
-        super().__init__(coordinator, config, hass, ENTITY_ID_FORMAT, "_latest_error")
+        super().__init__(coordinator, config, "latest_error")
 
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
         self._attr_native_value = ""
         self._attr_native_unit_of_measurement = None
 
-        self._attr_has_entity_name = True
         self._attr_translation_key = "latest_error_sensor"
 
         self.handle_data_updates(self.coordinator.data)

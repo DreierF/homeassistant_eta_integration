@@ -21,6 +21,7 @@ from custom_components.eta_webservices.switch import (
     async_setup_entry as switch_async_setup_entry,
 )
 from custom_components.eta_webservices.const import (
+    ENTRY_ID,
     ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION,
     CHOSEN_FLOAT_SENSORS,
     CHOSEN_SWITCHES,
@@ -94,6 +95,7 @@ async def test_all_writable_sensors_handled(hass: HomeAssistant, load_fixture):
 
     config = {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         WRITABLE_DICT: writable_dict,
         FLOAT_DICT: float_dict,
@@ -168,6 +170,7 @@ async def test_all_non_writable_sensors_handled(hass: HomeAssistant, load_fixtur
 
     config = {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         WRITABLE_DICT: writable_dict,
         FLOAT_DICT: float_dict,
@@ -257,6 +260,7 @@ async def test_all_writable_and_non_writable_sensors_handled(
 
     config = {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         WRITABLE_DICT: writable_dict,
         FLOAT_DICT: float_dict,
@@ -319,6 +323,7 @@ async def test_sensor_platform_skips_duplicate_unique_ids(
 
     config = {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         WRITABLE_DICT: writable_dict,
         FLOAT_DICT: float_dict,

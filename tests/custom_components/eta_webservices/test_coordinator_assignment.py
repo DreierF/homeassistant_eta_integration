@@ -26,6 +26,7 @@ from custom_components.eta_webservices.time import (
     async_setup_entry as time_async_setup_entry,
 )
 from custom_components.eta_webservices.const import (
+    ENTRY_ID,
     ADVANCED_OPTIONS_IGNORE_DECIMAL_PLACES_RESTRICTION,
     CHOSEN_FLOAT_SENSORS,
     CHOSEN_SWITCHES,
@@ -126,6 +127,7 @@ async def _run_test(
 
     config = {
         CONF_HOST: "192.168.0.25",
+        ENTRY_ID: "test_entry_id",
         CONF_PORT: 9091,
         FLOAT_DICT: float_dict,
         TEXT_DICT: text_dict,

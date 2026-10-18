@@ -3,6 +3,7 @@
 import asyncio
 import logging
 
+from .api_client import endpoint_key
 from .sensor_discovery_base import SensorDiscoveryBase
 from .types import (
     DEFAULT_VALID_WRITABLE_VALUES,
@@ -210,12 +211,7 @@ class SensorDiscoveryV11(SensorDiscoveryBase):
                     value=value,
                 )
 
-                unique_key = (
-                    "eta_"
-                    + self._http.host.replace(".", "_")
-                    + "_"
-                    + key.lower().replace(" ", "_")
-                )
+                unique_key = endpoint_key(uri)
 
                 if self._is_writable(endpoint_info):
                     _LOGGER.debug("Adding %s as writable sensor", uri)

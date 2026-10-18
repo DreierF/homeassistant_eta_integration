@@ -19,13 +19,16 @@ from custom_components.eta_webservices.const import (
     TEXT_DICT,
     WRITABLE_DICT,
 )
-from homeassistant.config_entries import ConfigEntryState
+from homeassistant.config_entries import SOURCE_USER, ConfigEntryState
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 NS = 'xmlns="http://www.eta.co.at/rest/v1"'
 TEMP_URI = "/120/10601/0/0/12197"
+TEMP_KEY = "120_10601_0_0_12197"
 
 
 def _entry_data(host: str) -> dict:
@@ -34,7 +37,7 @@ def _entry_data(host: str) -> dict:
         CONF_PORT: 8080,
         FORCE_LEGACY_MODE: False,
         FLOAT_DICT: {
-            "outside_temp": {
+            TEMP_KEY: {
                 "url": TEMP_URI,
                 "value": 10.0,
                 "valid_values": None,
@@ -47,7 +50,7 @@ def _entry_data(host: str) -> dict:
         TEXT_DICT: {},
         WRITABLE_DICT: {},
         PENDING_DICT: {},
-        CHOSEN_FLOAT_SENSORS: ["outside_temp"],
+        CHOSEN_FLOAT_SENSORS: [TEMP_KEY],
         CHOSEN_SWITCHES: [],
         CHOSEN_TEXT_SENSORS: [],
         CHOSEN_WRITABLE_SENSORS: [],
@@ -84,7 +87,10 @@ def _mock_eta(aioclient_mock: AiohttpClientMocker, host: str) -> None:
 
 async def _setup_entry(hass: HomeAssistant, host: str) -> MockConfigEntry:
     entry = MockConfigEntry(
-        domain=DOMAIN, data=_entry_data(host), version=EtaFlowHandler.VERSION
+        domain=DOMAIN,
+        data=_entry_data(host),
+        unique_id=f"{host}:8080",
+        version=EtaFlowHandler.VERSION,
     )
     entry.add_to_hass(hass)
     assert await hass.config_entries.async_setup(entry.entry_id)
@@ -105,10 +111,24 @@ async def test_setup_and_unload(
     entry = await _setup_entry(hass, "192.168.0.10")
 
     assert entry.state is ConfigEntryState.LOADED
-    assert entry.runtime_data[CHOSEN_FLOAT_SENSORS] == ["outside_temp"]
-    state = hass.states.get("sensor.outside_temp")
-    assert state is not None
+    assert entry.runtime_data[CHOSEN_FLOAT_SENSORS] == [TEMP_KEY]
+
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_{TEMP_KEY}"
+    )
+    # The entity ID is generated from the device and entity names
+    assert entity_id == "sensor.kessel_outside_temperature"
+    state = hass.states.get(entity_id)
     assert float(state.state) == 12.5
+
+    device_registry = dr.async_get(hass)
+    terminal = device_registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
+    kessel = device_registry.async_get_device(
+        identifiers={(DOMAIN, f"{entry.entry_id}_Kessel")}
+    )
+    assert terminal.name == "ETA"
+    assert kessel.name == "Kessel"
+    assert kessel.via_device_id == terminal.id
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
@@ -169,3 +189,22 @@ async def test_write_value_multiple_entries(
     assert [str(call[1]) for call in post_calls] == [
         "http://192.168.0.11:8080/user/var/120/10021/0/0/12080"
     ]
+
+
+async def test_same_system_cannot_be_added_twice(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The config flow aborts for a host and port that is already set up."""
+    _mock_eta(aioclient_mock, "192.168.0.10")
+    await _setup_entry(hass, "192.168.0.10")
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_USER}
+    )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {CONF_HOST: "192.168.0.10", CONF_PORT: 8080},
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"

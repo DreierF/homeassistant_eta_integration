@@ -47,6 +47,7 @@ from .const import (
     UPDATE_INTERVAL,
     WRITABLE_DICT,
 )
+from .utils import endpoint_key_from_unique_id
 
 _LOGGER = logging.getLogger(__name__)
 _HOSTNAME_LABEL_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$")
@@ -334,7 +335,7 @@ def _is_invalid_host_input(host: str) -> bool:
 class EtaFlowHandler(ConfigFlow, domain=DOMAIN):
     """Config flow for Eta."""
 
-    VERSION = 8
+    VERSION = 1
 
     def __init__(self) -> None:
         """Initialize."""
@@ -358,20 +359,16 @@ class EtaFlowHandler(ConfigFlow, domain=DOMAIN):
             self._errors["base"] = self._pending_user_error
             self._pending_user_error = None
 
-        # Uncomment the next 2 lines if only a single instance of the integration is allowed:
-        # if self._async_current_entries():
-        #     return self.async_abort(reason="single_instance_allowed")
-
         if user_input is not None:
             user_input[CONF_HOST] = str(user_input[CONF_HOST]).strip()
             if _is_invalid_host_input(user_input[CONF_HOST]):
                 self._errors["base"] = "unknown_host"
                 return await self._show_config_form_user(user_input)
 
-            platform_entries = self._async_current_entries()
-            for entry in platform_entries:
-                if entry.data.get(CONF_HOST, "") == user_input[CONF_HOST]:
-                    return self.async_abort(reason="single_instance_allowed")
+            await self.async_set_unique_id(
+                f"{user_input[CONF_HOST]}:{user_input[CONF_PORT]}"
+            )
+            self._abort_if_unique_id_configured()
             if user_input[ENABLE_DEBUG_LOGGING] and _LOGGER.parent is not None:
                 self._old_logging_level = _LOGGER.parent.getEffectiveLevel()
                 _LOGGER.parent.setLevel(logging.DEBUG)
@@ -1177,19 +1174,34 @@ class EtaOptionsFlowHandler(OptionsFlow):
             self.config_entry.entry_id,  # pyright: ignore[reportOptionalMemberAccess]
         )
 
-        # If a sensor has been moved to a different category when updating the lists of sensors, it will is deleted from the chosen_*_sensors lists.
-        # However, if the entity id is still the same the sensor may be moved to the correct category here.
+        # Map the registered entities by endpoint key. If a sensor has been moved to
+        # a different category when updating the lists of sensors, it is deleted
+        # from the chosen_*_sensors lists, but may be moved to the correct category here.
+        entities_by_key = {
+            key: e
+            for e in entries
+            if (
+                key := endpoint_key_from_unique_id(
+                    self.config_entry.entry_id, e.unique_id
+                )
+            )
+            is not None
+        }
         entity_map_sensors = {
-            e.unique_id: e for e in entries if e.unique_id in self.data[FLOAT_DICT]
+            key: e for key, e in entities_by_key.items() if key in self.data[FLOAT_DICT]
         }
         entity_map_switches = {
-            e.unique_id: e for e in entries if e.unique_id in self.data[SWITCHES_DICT]
+            key: e
+            for key, e in entities_by_key.items()
+            if key in self.data[SWITCHES_DICT]
         }
         entity_map_text_sensors = {
-            e.unique_id: e for e in entries if e.unique_id in self.data[TEXT_DICT]
+            key: e for key, e in entities_by_key.items() if key in self.data[TEXT_DICT]
         }
         entity_map_writable_sensors = {
-            e.unique_id: e for e in entries if e.unique_id in self.data[WRITABLE_DICT]
+            key: e
+            for key, e in entities_by_key.items()
+            if key in self.data[WRITABLE_DICT]
         }
 
         if user_input is not None:
