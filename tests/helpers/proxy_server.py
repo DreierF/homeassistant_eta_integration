@@ -7,8 +7,8 @@ to an external ETA device, with selectable override modes for a specific node.
 
 Modes (switch with key presses):
   1 — Pass-through: all requests forwarded to the external server
-  2 — Valid node:   /user/var//40/10021/0/11108/0 and
-                    /user/varinfo//40/10021/0/11108/0 return the "valid"
+  2 — Valid node:   /user/var/40/10021/0/11108/0 and
+                    /user/varinfo/40/10021/0/11108/0 return the "valid"
                     fixture from changing_endpoint.json; rest are forwarded
   3 — Invalid node: same paths return the "invalid" fixture; rest forwarded
 
@@ -32,8 +32,8 @@ SCRIPT_DIR = Path(__file__).parent
 FIXTURE_PATH = SCRIPT_DIR / "../fixtures/changing_endpoint.json"
 
 OVERRIDE_PATHS = {
-    "/user/var//40/10021/0/11108/0",
-    "/user/varinfo//40/10021/0/11108/0",
+    "/user/var/40/10021/0/11108/0",
+    "/user/varinfo/40/10021/0/11108/0",
 }
 
 # Shared mutable state — written only from the keyboard thread, read from handlers

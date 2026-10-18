@@ -29,8 +29,8 @@ from custom_components.eta_webservices.const import (
 # ---------------------------------------------------------------------------
 
 PENDING_URI = "/40/10021/0/11108/0"
-PENDING_VARINFO_PATH = "/user/varinfo/" + PENDING_URI
-PENDING_VAR_PATH = "/user/var/" + PENDING_URI
+PENDING_VARINFO_PATH = "/user/varinfo" + PENDING_URI
+PENDING_VAR_PATH = "/user/var" + PENDING_URI
 
 INVALID_VAR_XML = (
     '<?xml version="1.0" encoding="utf-8"?>'

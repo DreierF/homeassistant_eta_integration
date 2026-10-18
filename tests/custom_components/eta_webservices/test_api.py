@@ -176,7 +176,7 @@ async def test_get_all_sensors_v12(load_fixture):
     async def mock_get_request(suffix):
         """Mock _get_request to return fixture data."""
         # Extract the path from the suffix
-        # suffix is like "/user/menu", "/user/var//120/10111/0/0/10990", etc.
+        # suffix is like "/user/menu", "/user/var/120/10111/0/0/10990", etc.
         response = create_mock_response(suffix)
         return response
 
@@ -487,8 +487,8 @@ async def test_get_all_sensors_v12_skips_duplicates(load_fixture):
 
     assert result is True
     # Verify that the duplicate endpoint was only queried once
-    varinfo_key = "/user/varinfo//120/10111/0/0/12271"
-    var_key = "/user/var//120/10111/0/0/12271"
+    varinfo_key = "/user/varinfo/120/10111/0/0/12271"
+    var_key = "/user/var/120/10111/0/0/12271"
 
     # The duplicate should have been skipped, so each endpoint should be called once
     assert call_count.get(varinfo_key, 0) <= 1, (
@@ -843,7 +843,7 @@ async def test_get_all_sensors_v11_skips_duplicates():
 
     assert result is False
     # Verify duplicate was only queried once
-    var_key = "/user/var//120/10101/0/0/12197"
+    var_key = "/user/var/120/10101/0/0/12197"
     assert call_count.get(var_key, 0) <= 1, (
         f"Duplicate endpoint should be queried at most once, "
         f"but was queried {call_count.get(var_key, 0)} times"
@@ -1328,7 +1328,7 @@ async def test_get_data_returns_parsed_data(load_fixture):
 
     api_endpoint_data = load_fixture("api_endpoint_data.json")
     test_uri = "/120/10101/0/0/12197"
-    expected_xml = api_endpoint_data[f"/user/var/{test_uri}"]
+    expected_xml = api_endpoint_data[f"/user/var{test_uri}"]
 
     async def mock_get_request(suffix):
         response = AsyncMock()
@@ -1462,7 +1462,7 @@ async def test_get_data_float_endpoint_preserves_precision():
     float_endpoint_xml = (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<eta version="1.0" xmlns="http://www.eta.co.at/rest/v1">\n'
-        ' <value advTextOffset="0" unit="m³" uri="/user/var//79/10531/0/0/2274"'
+        ' <value advTextOffset="0" unit="m³" uri="/user/var/79/10531/0/0/2274"'
         ' strValue="11,2" scaleFactor="1" decPlaces="1">11.2365</value>\n'
         "</eta>\n"
     )
@@ -1943,7 +1943,7 @@ async def test_set_switch_state_sends_correct_data():
     result = await api.set_switch_state("/120/10101/0/0/12080", 1803)
 
     assert result is True, "Should return True on success"
-    assert posted_uri == "/user/var//120/10101/0/0/12080", "Should post to correct URI"
+    assert posted_uri == "/user/var/120/10101/0/0/12080", "Should post to correct URI"
     assert posted_data == {"value": 1803}, "Should send correct data"
 
 
@@ -1976,7 +1976,7 @@ async def test_write_endpoint_with_value_only():
     result = await api.write_endpoint("/120/10101/0/0/12132", value=300)
 
     assert result is True, "Should return True on success"
-    assert posted_uri == "/user/var//120/10101/0/0/12132", "Should post to correct URI"
+    assert posted_uri == "/user/var/120/10101/0/0/12132", "Should post to correct URI"
     assert posted_data == {"value": 300}, "Should send only value"
     assert "begin" not in posted_data, "Should not include begin parameter"
     assert "end" not in posted_data, "Should not include end parameter"
@@ -2013,7 +2013,7 @@ async def test_write_endpoint_with_all_parameters():
     )
 
     assert result is True, "Should return True on success"
-    assert posted_uri == "/user/var//120/10101/0/0/12132", "Should post to correct URI"
+    assert posted_uri == "/user/var/120/10101/0/0/12132", "Should post to correct URI"
     assert posted_data == {"value": 300, "begin": "08:00", "end": "18:00"}, (
         "Should send all parameters"
     )
@@ -2285,10 +2285,10 @@ async def test_api_client_post_request_calls_correct_url_and_data():
 
     client = APIClient(mock_session, "192.168.0.1", 8080)
     payload = {"value": 1803}
-    result = await client.post_request("/user/var//120/10101/0/0/12080", payload)
+    result = await client.post_request("/user/var/120/10101/0/0/12080", payload)
 
     mock_session.post.assert_called_once_with(
-        "http://192.168.0.1:8080/user/var//120/10101/0/0/12080", data=payload
+        "http://192.168.0.1:8080/user/var/120/10101/0/0/12080", data=payload
     )
     assert result is mock_response
 

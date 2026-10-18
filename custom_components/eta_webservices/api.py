@@ -12,7 +12,7 @@ from aiohttp import ClientSession
 from packaging import version
 import xmltodict
 
-from ._api.api_client import APIClient
+from ._api.api_client import APIClient, resource_path
 from ._api.sensor_discovery_v11 import SensorDiscoveryV11
 from ._api.sensor_discovery_v12 import SensorDiscoveryV12
 
@@ -106,7 +106,7 @@ class EtaAPI:
                         "API version check timed out, using compatibility discovery",
                         0.03,
                     )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.warning(
                     "ETA API version check failed, falling back to legacy discovery mode",
                     exc_info=True,
@@ -216,7 +216,7 @@ class EtaAPI:
         :return: Raw switch value, like 1802
         :rtype: int
         """
-        data = await self._http.get_request("/user/var/" + str(uri))
+        data = await self._http.get_request(resource_path("/user/var", uri))
         text = await data.text()
         data = xmltodict.parse(text)["eta"]["value"]
         return int(data["#text"])
@@ -242,7 +242,7 @@ class EtaAPI:
         :rtype: boolean
         """
         data = {"value": state}
-        response = await self._http.post_request("/user/var/" + str(uri), data)
+        response = await self._http.post_request(resource_path("/user/var", uri), data)
         text = await response.text()
         parsed = xmltodict.parse(text)
 
@@ -280,7 +280,7 @@ class EtaAPI:
             data["begin"] = begin
         if end is not None:
             data["end"] = end
-        response = await self._http.post_request("/user/var/" + str(uri), data)
+        response = await self._http.post_request(resource_path("/user/var", uri), data)
         text = await response.text()
         parsed = xmltodict.parse(text)
 

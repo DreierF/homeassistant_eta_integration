@@ -26,7 +26,7 @@ def extract_varinfo_uris(endpoint_data: dict) -> dict:
         if "/varinfo/" not in key:
             continue
 
-        # Extract URI from key: /user/varinfo//120/10111/... -> /120/10111/...
+        # Extract URI from key: /user/varinfo/120/10111/... -> /120/10111/...
         uri = key.replace("/user/varinfo/", "").lstrip("/")
         if not uri.startswith("/"):
             uri = "/" + uri
@@ -87,7 +87,7 @@ def extract_var_uris(endpoint_data: dict) -> dict:
         if "/user/var/" not in key:
             continue
 
-        # Extract URI from key: /user/var//120/10111/... -> /120/10111/...
+        # Extract URI from key: /user/var/120/10111/... -> /120/10111/...
         uri = key.replace("/user/var/", "").lstrip("/")
         if not uri.startswith("/"):
             uri = "/" + uri

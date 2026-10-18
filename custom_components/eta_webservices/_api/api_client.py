@@ -13,6 +13,15 @@ from .types import FLOAT_SENSOR_UNITS, ETAError
 _LOGGER = logging.getLogger(__name__)
 
 
+def resource_path(resource: str, uri: str) -> str:
+    """Build the path of a variable resource, e.g. /user/var/120/10021/0/0/12080.
+
+    Endpoint URIs from the menu start with a slash, so joining naively would
+    produce /user/var//120/..., which the spec does not define.
+    """
+    return f"{resource}/{str(uri).lstrip('/')}"
+
+
 class APIClient:
     """Handles low-level HTTP and XML operations for ETA API."""
 
@@ -131,7 +140,7 @@ class APIClient:
         :param float_sensor_units: List of units for float parsing
         :return: Tuple of (value, unit, raw_dict)
         """
-        data = await self.get_request("/user/var/" + str(uri))
+        data = await self.get_request(resource_path("/user/var", uri))
         text = await data.text()
         data = xmltodict.parse(text)["eta"]["value"]
         value, unit = self.parse_data(data)
@@ -148,7 +157,7 @@ class APIClient:
         :return: Parsed data as a Tuple[Value, Unit]
         :rtype: Tuple[Any,str]
         """
-        data = await self.get_request("/user/var/" + str(uri))
+        data = await self.get_request(resource_path("/user/var", uri))
         text = await data.text()
         data = xmltodict.parse(text)["eta"]["value"]
         return self.parse_data(

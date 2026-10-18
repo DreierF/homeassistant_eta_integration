@@ -12,6 +12,7 @@ from ..const import (  # noqa: TID252
     CUSTOM_UNIT_UNITLESS,
     CUSTOM_UNITS,
 )
+from .api_client import resource_path
 from .sensor_discovery_base import SensorDiscoveryBase
 from .types import WRITABLE_SENSOR_UNITS, ETAEndpoint, ETAValidWritableValues
 
@@ -192,7 +193,7 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
 
     async def _get_varinfo(self, fub, uri):
         """Fetch varinfo from API."""
-        data = await self._http.get_request("/user/varinfo/" + str(uri))
+        data = await self._http.get_request(resource_path("/user/varinfo", uri))
         text = await data.text()
         data = xmltodict.parse(text)["eta"]["varInfo"]["variable"]
         return self._parse_varinfo(data, fub, uri)
@@ -584,7 +585,7 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
                 else:
                     _LOGGER.debug("Not adding endpoint %s: Unknown type", uri)
 
-            except Exception:  # noqa: BLE001
+            except Exception:
                 _LOGGER.debug("Invalid endpoint %s", uri, exc_info=True)
 
         # Log final statistics

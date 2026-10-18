@@ -231,15 +231,15 @@ class FixtureUpdater:
         Returns:
             Dict with fixture entries:
             {
-                "/user/varinfo//120/10111/0/0/10990": "<xml>...</xml>",
-                "/user/var//120/10111/0/0/10990": "<xml>...</xml>"
+                "/user/varinfo/120/10111/0/0/10990": "<xml>...</xml>",
+                "/user/var/120/10111/0/0/10990": "<xml>...</xml>"
             }
         """
         async with semaphore:
             result = {}
 
             # Fetch varinfo
-            varinfo_key = f"/user/varinfo/{uri}"
+            varinfo_key = f"/user/varinfo/{uri.lstrip('/')}"
             try:
                 response = await self.api._http.get_request(varinfo_key)  # type: ignore
                 xml = await response.text()
@@ -252,7 +252,7 @@ class FixtureUpdater:
                 self.failed_endpoints.append((varinfo_key, str(e)))
 
             # Fetch var
-            var_key = f"/user/var/{uri}"
+            var_key = f"/user/var/{uri.lstrip('/')}"
             try:
                 response = await self.api._http.get_request(var_key)  # type: ignore
                 xml = await response.text()
