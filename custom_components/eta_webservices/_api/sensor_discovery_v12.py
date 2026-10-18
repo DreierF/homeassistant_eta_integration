@@ -134,6 +134,9 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
             and "value" in data["validValues"]
         ):
             values = data["validValues"]["value"]
+            # xmltodict yields a dict instead of a list for a single <value>
+            if isinstance(values, dict):
+                values = [values]
             valid_values = dict(
                 zip(
                     [k["@strValue"] for k in values],

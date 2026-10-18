@@ -137,12 +137,13 @@ class EtaWritableNumberSensor(NumberEntity, EtaCoordinatedSensorEntity[float]):
                 self._attr_name,
             )
             # scale the value based on the scale factor and ignore the dec_places, i.e. set as many decimal places as the scale factor allows
-            raw_value = round(value * self.valid_values["scale_factor"], 0)
+            raw_value = round(value * self.valid_values["scale_factor"])
         else:
             raw_value = round(value, self.valid_values["dec_places"])
             raw_value *= self.valid_values["scale_factor"]
             if not self.is_float:
-                raw_value = round(raw_value, 0)
+                # The terminal expects integral raw values, e.g. 206 rather than 206.0
+                raw_value = round(raw_value)
 
         eta_client = self._create_eta_client()
         success = await eta_client.write_endpoint(self.uri, raw_value)

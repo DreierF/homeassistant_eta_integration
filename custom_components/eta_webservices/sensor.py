@@ -405,10 +405,12 @@ class EtaTimeslotSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
             )
 
         raw_value = None
-        if temperature:
-            raw_value = round(temperature, self.valid_values["dec_places"])
-            raw_value *= self.valid_values["scale_factor"]
-            raw_value = round(raw_value, 0)
+        # 0 °C is a valid temperature, so test against None
+        if temperature is not None:
+            raw_value = round(
+                round(temperature, self.valid_values["dec_places"])
+                * self.valid_values["scale_factor"]
+            )
             if (
                 temperature < self.valid_values["scaled_min_value"]
                 or temperature > self.valid_values["scaled_max_value"]

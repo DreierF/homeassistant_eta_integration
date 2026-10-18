@@ -205,9 +205,9 @@ class EtaAPI:
         """
         data = await self._http.get_request("/user/errors")
         text = await data.text()
-        data = xmltodict.parse(text)["eta"]["errors"]["fub"]
-
-        return self._http.parse_errors(data)
+        # Without any functional blocks <errors> parses to None, not a dict
+        errors = xmltodict.parse(text)["eta"].get("errors") or {}
+        return self._http.parse_errors(errors.get("fub", []))
 
     async def get_switch_state(self, uri: str):
         """Get the raw state of a switch sensor.
