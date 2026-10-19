@@ -198,6 +198,58 @@ async def async_setup_entry(
     )
 
 
+# Counters as (Fub-ID, Var-ID) of their CAN address. These IDs identify the
+# variable type independently of the node number and the terminal language,
+# e.g. 10021/12153 is "Volllaststunden" or "Full load hours" on every boiler.
+COUNTER_VARIABLES = frozenset(
+    {
+        # Boiler: pellet consumption, operating times and event counters
+        ("10021", "12012"),
+        ("10021", "12013"),
+        ("10021", "12014"),
+        ("10021", "12016"),
+        ("10021", "12017"),
+        ("10021", "12018"),
+        ("10021", "12081"),
+        ("10021", "12082"),
+        ("10021", "12153"),
+        ("10021", "12154"),
+        ("10021", "12155"),
+        ("10021", "12156"),
+        ("10021", "12157"),
+        ("10021", "12299"),
+        ("10021", "12323"),
+        ("10021", "13642"),
+        ("10021", "13643"),
+        # Pellet store vacuum system
+        ("10211", "13792"),
+        ("10211", "13793"),
+        ("10211", "13794"),
+        ("10211", "13795"),
+        # Water meter
+        ("10531", "2274"),
+    }
+)
+
+
+def _is_counter(uri: str) -> bool:
+    """Return True if the variable at the CAN address is a known counter."""
+    parts = uri.strip("/").split("/")
+    return len(parts) == 5 and (parts[1], parts[4]) in COUNTER_VARIABLES
+
+
+def _determine_state_class(
+    uri: str, device_class: SensorDeviceClass | None
+) -> SensorStateClass:
+    # Energy and volume sensors can only be totals in HA
+    if _is_counter(uri) or device_class in (
+        SensorDeviceClass.ENERGY,
+        SensorDeviceClass.VOLUME,
+    ):
+        return SensorStateClass.TOTAL_INCREASING
+    return SensorStateClass.MEASUREMENT
+
+
 def _determine_device_class(unit):
     unit_dict_eta = {
         "°C": SensorDeviceClass.TEMPERATURE,
@@ -267,10 +319,9 @@ class EtaFloatSensor(SensorEntity, EtaCoordinatedSensorEntity[float]):
 
         self._attr_native_unit_of_measurement = get_native_unit(endpoint_info["unit"])
 
-        if self._attr_device_class == SensorDeviceClass.ENERGY:
-            self._attr_state_class = SensorStateClass.TOTAL_INCREASING
-        else:
-            self._attr_state_class = SensorStateClass.MEASUREMENT
+        self._attr_state_class = _determine_state_class(
+            endpoint_info["url"], self._attr_device_class
+        )
 
     def handle_data_updates(self, data: float | str | None) -> None:  # noqa: D102
         numeric_value = _coerce_numeric_value(data)

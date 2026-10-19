@@ -3,6 +3,8 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
+from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components.sensor.const import DEVICE_CLASS_STATE_CLASSES
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -11,6 +13,7 @@ from custom_components.eta_webservices.number import (
     async_setup_entry as number_async_setup_entry,
 )
 from custom_components.eta_webservices.sensor import (
+    EtaFloatSensor,
     _coerce_numeric_value,
     async_setup_entry as sensor_async_setup_entry,
 )
@@ -358,3 +361,33 @@ async def test_sensor_platform_skips_duplicate_unique_ids(
     assert len(unique_ids) == len(set(unique_ids))
     # 1 deduplicated regular sensor + 2 always-present error sensors
     assert len(all_entities) == 3
+
+
+async def test_float_sensor_state_classes(hass: HomeAssistant, load_fixture):
+    """Every float sensor gets a state class HA allows for its device class."""
+    float_dict = load_fixture("api_assignment_reference_values_v12.json")["float_dict"]
+    coordinator = MagicMock()
+    coordinator.data = {}
+    config = {CONF_HOST: "192.168.0.25", CONF_PORT: 8080, ENTRY_ID: "test_entry_id"}
+
+    sensors = {
+        key: EtaFloatSensor(config, hass, key, endpoint, coordinator)
+        for key, endpoint in float_dict.items()
+    }
+
+    for key, sensor in sensors.items():
+        if sensor.device_class is not None:
+            assert sensor.state_class in DEVICE_CLASS_STATE_CLASSES[
+                sensor.device_class
+            ], key
+    # Gesamtverbrauch, Volllaststunden, Zähler Zündungen and Wassermenge
+    for key in (
+        "40_10021_0_0_12016",
+        "40_10021_0_0_12153",
+        "40_10021_0_0_12018",
+        "79_10531_0_0_2274",
+    ):
+        assert sensors[key].state_class is SensorStateClass.TOTAL_INCREASING, key
+    # Inhalt Pelletsbehälter and Dauer der letzten Zündung are not counters
+    for key in ("40_10021_0_0_12011", "40_10021_0_0_13346"):
+        assert sensors[key].state_class is SensorStateClass.MEASUREMENT, key
