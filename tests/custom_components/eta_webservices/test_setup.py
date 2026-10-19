@@ -1,5 +1,7 @@
 """End-to-end tests for setting up, unloading and servicing a config entry."""
 
+import re
+
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 from pytest_homeassistant_custom_component.test_util.aiohttp import AiohttpClientMocker
@@ -15,6 +17,7 @@ from custom_components.eta_webservices.const import (
     FLOAT_DICT,
     FORCE_LEGACY_MODE,
     PENDING_DICT,
+    SENSOR_UPDATE_COORDINATOR,
     SWITCHES_DICT,
     TEXT_DICT,
     WRITABLE_DICT,
@@ -74,8 +77,29 @@ def _entry_data(host: str) -> dict:
     }
 
 
-def _mock_eta(aioclient_mock: AiohttpClientMocker, host: str) -> None:
+def _mock_eta(
+    aioclient_mock: AiohttpClientMocker, host: str, vars_supported: bool = True
+) -> None:
     base = f"http://{host}:8080"
+    vars_url = re.compile(rf"^{re.escape(base)}/user/vars/")
+    if vars_supported:
+        aioclient_mock.delete(vars_url, status=200)
+        aioclient_mock.put(vars_url, status=201)
+        aioclient_mock.get(
+            vars_url,
+            text=(
+                f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+                '<vars uri="/user/vars/set">'
+                f'<variable uri="{TEMP_URI.lstrip("/")}" strValue="13,5" unit="°C" '
+                'decPlaces="1" scaleFactor="10" advTextOffset="0">135</variable>'
+                f'<variable uri="{SLOT_URI.lstrip("/")}" strValue="15:30 - 18:00 55" '
+                'unit="°C" decPlaces="0" scaleFactor="10" advTextOffset="0">0'
+                "</variable></vars></eta>"
+            ),
+        )
+    else:
+        aioclient_mock.delete(vars_url, status=404)
+        aioclient_mock.put(vars_url, status=404)
     aioclient_mock.get(
         f"{base}/user/var{TEMP_URI}",
         text=(
@@ -150,8 +174,9 @@ async def test_setup_and_unload(
     )
     # The entity ID is generated from the device and entity names
     assert entity_id == "sensor.kessel_outside_temperature"
+    # The value comes from the variable set, not the single variable
     state = hass.states.get(entity_id)
-    assert float(state.state) == 12.5
+    assert float(state.state) == 13.5
 
     device_registry = dr.async_get(hass)
     terminal = device_registry.async_get_device(identifiers={(DOMAIN, entry.entry_id)})
@@ -162,11 +187,38 @@ async def test_setup_and_unload(
     assert kessel.name == "Kessel"
     assert kessel.via_device_id == terminal.id
 
+    aioclient_mock.mock_calls.clear()
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
     assert entry.state is ConfigEntryState.NOT_LOADED
+    # The variable sets of both coordinators are deleted on unload
+    deleted = [str(call[1]) for call in aioclient_mock.mock_calls]
+    assert len(deleted) == 2
+    assert all("/user/vars/ha" in url for url in deleted)
     # Services are registered once for the integration and survive unloading.
     assert hass.services.has_service(DOMAIN, "write_value")
+
+
+async def test_falls_back_to_single_variables(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Terminals refusing variable sets are read one variable at a time."""
+    _mock_eta(aioclient_mock, "192.168.0.10", vars_supported=False)
+    entry = await _setup_entry(hass, "192.168.0.10")
+
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_{TEMP_KEY}"
+    )
+    assert float(hass.states.get(entity_id).state) == 12.5
+
+    # The set is not tried again on the next update
+    aioclient_mock.mock_calls.clear()
+    await entry.runtime_data[SENSOR_UPDATE_COORDINATOR].async_refresh()
+    urls = {str(call[1]) for call in aioclient_mock.mock_calls}
+    assert urls == {
+        f"http://192.168.0.10:8080/user/var{TEMP_URI}",
+        f"http://192.168.0.10:8080/user/var{SLOT_URI}",
+    }
 
 
 async def test_write_value_single_entry(
@@ -272,6 +324,9 @@ async def test_setup_retries_when_terminal_returns_no_values(
     """Setup is retried instead of creating entities without any values."""
     base = "http://192.168.0.10:8080"
     aioclient_mock.get(f"{base}/user/errors", text=f"<eta {NS}><errors/></eta>")
+    vars_url = re.compile(rf"^{re.escape(base)}/user/vars/")
+    for method in ("delete", "put", "get"):
+        aioclient_mock.request(method, vars_url, status=500)
     aioclient_mock.get(f"{base}/user/var{TEMP_URI}", status=500)
     aioclient_mock.get(f"{base}/user/var{SLOT_URI}", status=500)
     entry = MockConfigEntry(

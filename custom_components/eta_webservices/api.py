@@ -27,6 +27,11 @@ from ._api.types import (  # noqa: F401
     ETAValidSwitchValues,
     ETAValidWritableValues,
 )
+from ._api.variable_set import (
+    VARIABLE_SET_ERRORS,
+    VariableSet,
+    VariableSetUnsupportedError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -185,14 +190,37 @@ class EtaAPI:
             force_string_handling=force_string_handling,
         )
 
-    async def get_all_data(self, sensor_list: dict[str, dict[str, bool]]):
+    async def get_all_data(
+        self,
+        sensor_list: dict[str, dict[str, bool]],
+        variable_set: VariableSet | None = None,
+    ):
         """Get all data from all endpoints.
 
         :param sensor_list: Dict[url, Dict[str, bool]] of sensors to query the data for
+        :param variable_set: Optional set of the same URIs to read with a single
+            request; falls back to one request per variable if that fails
         :return: List of all data
         :rtype: Dict[str, Any]
         """
+        if variable_set is not None and variable_set.supported:
+            try:
+                raw_data = await variable_set.read(self._http)
+            except VariableSetUnsupportedError as err:
+                _LOGGER.info("%s, reading variables one by one", err)
+            except VARIABLE_SET_ERRORS as err:
+                _LOGGER.debug(
+                    "Reading variable set %s failed, reading variables one by one: %r",
+                    variable_set.name,
+                    err,
+                )
+            else:
+                return self._http.parse_all_data(raw_data, sensor_list)
         return await self._http.get_all_data(sensor_list)
+
+    async def delete_variable_set(self, variable_set: VariableSet) -> None:
+        """Delete a variable set on the terminal."""
+        await variable_set.delete(self._http)
 
     async def get_menu(self):
         """Request the menu from the ETA API, which includes links to all possible sensors."""
@@ -209,30 +237,6 @@ class EtaAPI:
         # Without any functional blocks <errors> parses to None, not a dict
         errors = xmltodict.parse(text)["eta"].get("errors") or {}
         return self._http.parse_errors(errors.get("fub", []))
-
-    async def get_switch_state(self, uri: str):
-        """Get the raw state of a switch sensor.
-
-        :param uri: URL suffix of the switch sensor
-        :return: Raw switch value, like 1802
-        :rtype: int
-        """
-        data = await self._http.get_request(resource_path("/user/var", uri))
-        text = await data.text()
-        data = xmltodict.parse(text)["eta"]["value"]
-        return int(data["#text"])
-
-    async def get_all_switch_states(self, switch_uris: list[str]):
-        """Get switch states from all endpoints.
-
-        :param switch_uris: List of switch endpoint URIs
-        :return: Mapping from URI to raw switch state (or exception)
-        :rtype: Dict[str, Any]
-        """
-        tasks = [self.get_switch_state(uri) for uri in switch_uris]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        return dict(zip(switch_uris, results, strict=False))
 
     async def set_switch_state(self, uri: str, state: int):
         """Set the state of a switch sensor.

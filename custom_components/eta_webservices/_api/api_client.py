@@ -90,6 +90,26 @@ class APIClient:
                 self._build_uri(suffix), data=data, timeout=REQUEST_TIMEOUT
             )
 
+    async def put_request(self, suffix: str) -> None:
+        """Execute PUT request, raising for error statuses."""
+        async with (
+            self._request_semaphore,
+            self._session.put(
+                self._build_uri(suffix), timeout=REQUEST_TIMEOUT
+            ) as response,
+        ):
+            response.raise_for_status()
+
+    async def delete_request(self, suffix: str) -> None:
+        """Execute DELETE request, raising for error statuses."""
+        async with (
+            self._request_semaphore,
+            self._session.delete(
+                self._build_uri(suffix), timeout=REQUEST_TIMEOUT
+            ) as response,
+        ):
+            response.raise_for_status()
+
     def _evaluate_xml_dict(self, xml_dict, uri_dict: dict, prefix: str = ""):
         """Recursively evaluate XML dictionary and extract URIs."""
         if isinstance(xml_dict, list):
@@ -137,18 +157,21 @@ class APIClient:
         data: dict,
         force_number_handling: bool = False,
         force_string_handling: bool = False,
+        raw_value: bool = False,
     ) -> tuple[float | str, str]:
         """Parse data from ETA API response.
 
-        :param data: XML data dict
+        :param data: XML data dict of a <value> or <variable> element
         :param force_number_handling: Force numeric parsing
         :param force_string_handling: Force string parsing
-        :param float_sensor_units: List of units that should be parsed as floats
+        :param raw_value: Return the unscaled integer value, e.g. 1803 for a switch
         :return: Tuple of (value, unit)
         """
         _LOGGER.debug("Parsing data %s", data)
         unit = data["@unit"]
-        if not force_string_handling and (
+        if raw_value:
+            value = int(data["#text"])
+        elif not force_string_handling and (
             unit in FLOAT_SENSOR_UNITS or force_number_handling
         ):
             scale_factor = int(data["@scaleFactor"])
@@ -175,7 +198,11 @@ class APIClient:
         return value, unit, data
 
     async def get_data(
-        self, uri, force_number_handling=False, force_string_handling=False
+        self,
+        uri,
+        force_number_handling=False,
+        force_string_handling=False,
+        raw_value=False,
     ) -> tuple[float | str, str]:
         """Request the data from a API URL.
 
@@ -192,6 +219,7 @@ class APIClient:
             data,
             force_number_handling=force_number_handling,
             force_string_handling=force_string_handling,
+            raw_value=raw_value,
         )
 
     async def get_all_data(self, sensor_list: dict[str, dict[str, bool]]):
@@ -203,15 +231,7 @@ class APIClient:
         """
 
         tasks = [
-            self.get_data(
-                uri,
-                force_number_handling=force_handlings.get(
-                    "force_number_handling", False
-                ),
-                force_string_handling=force_handlings.get(
-                    "force_string_handling", False
-                ),
-            )
+            self.get_data(uri, **force_handlings)
             for uri, force_handlings in sensor_list.items()
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -223,6 +243,25 @@ class APIClient:
             else:
                 data_dict[uri] = result[0]  # extract value from (value, unit) tuple
 
+        return data_dict
+
+    def parse_all_data(
+        self, raw_data: dict[str, dict], sensor_list: dict[str, dict[str, bool]]
+    ) -> dict[str, float | str]:
+        """Parse the raw values of a variable set like get_all_data would.
+
+        :param raw_data: Raw <variable> elements keyed by URI
+        :param sensor_list: Dict[url, Dict[str, bool]] of sensors to parse
+        """
+        data_dict: dict[str, float | str] = {}
+        for uri, force_handlings in sensor_list.items():
+            if uri not in raw_data:
+                _LOGGER.debug("No data for %s in variable set", uri)
+                continue
+            try:
+                data_dict[uri] = self.parse_data(raw_data[uri], **force_handlings)[0]
+            except (KeyError, ValueError) as err:
+                _LOGGER.debug("Failed to parse data for %s: %r", uri, err)
         return data_dict
 
     def parse_errors(self, data) -> list[ETAError]:

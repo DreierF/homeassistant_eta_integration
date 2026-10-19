@@ -3,13 +3,17 @@
 from datetime import time
 from unittest.mock import AsyncMock, MagicMock
 
-from aiohttp import ClientSession
+from aiohttp import ClientResponseError, ClientSession
 import pytest
 import xmltodict
 
 from custom_components.eta_webservices._api.api_client import resource_path
 from custom_components.eta_webservices._api.sensor_discovery_v12 import (
     SensorDiscoveryV12,
+)
+from custom_components.eta_webservices._api.variable_set import (
+    VariableSet,
+    VariableSetUnsupportedError,
 )
 from custom_components.eta_webservices.api import EtaAPI
 from custom_components.eta_webservices.const import (
@@ -226,3 +230,84 @@ async def test_invalid_timeslot_writes(hass, unit, writable, begin, end, tempera
         await sensor.async_write_timeslot(begin, end, temperature)
 
     sensor._create_eta_client().write_endpoint.assert_not_awaited()
+
+
+def _vars_response(*variables: str):
+    response = AsyncMock()
+    response.text = AsyncMock(
+        return_value=(
+            f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+            f'<vars uri="/user/vars/haset">{"".join(variables)}</vars></eta>'
+        )
+    )
+    return response
+
+
+def _variable(uri: str, raw: int) -> str:
+    return (
+        f'<variable uri="{uri}" strValue="{raw}" unit="" decPlaces="0" '
+        f'scaleFactor="1" advTextOffset="1802">{raw}</variable>'
+    )
+
+
+async def test_variable_set_is_created_and_read():
+    """The set is created with its variables and read with one request."""
+    http = MagicMock()
+    http.delete_request = AsyncMock()
+    http.put_request = AsyncMock()
+    http.get_request = AsyncMock(
+        return_value=_vars_response(_variable("112/10021/0/0/12112", 1802))
+    )
+    variable_set = VariableSet("haset", ["/112/10021/0/0/12112"])
+
+    raw = await variable_set.read(http)
+
+    assert raw["/112/10021/0/0/12112"]["#text"] == "1802"
+    http.delete_request.assert_awaited_once_with("/user/vars/haset")
+    assert [call.args for call in http.put_request.await_args_list] == [
+        ("/user/vars/haset",),
+        ("/user/vars/haset/112/10021/0/0/12112",),
+    ]
+    http.get_request.assert_awaited_once_with("/user/vars/haset")
+
+
+async def test_variable_set_is_recreated_after_reboot():
+    """Sets are not persisted, so a failing read recreates the set once."""
+    http = MagicMock()
+    http.delete_request = AsyncMock()
+    http.put_request = AsyncMock()
+    lost = ClientResponseError(MagicMock(), (), status=404)
+    http.get_request = AsyncMock(
+        side_effect=[
+            _vars_response(_variable("112/10021/0/0/12112", 1802)),
+            lost,
+            _vars_response(_variable("112/10021/0/0/12112", 1803)),
+        ]
+    )
+    variable_set = VariableSet("haset", ["/112/10021/0/0/12112"])
+    await variable_set.read(http)
+
+    raw = await variable_set.read(http)
+
+    assert raw["/112/10021/0/0/12112"]["#text"] == "1803"
+    assert http.put_request.await_count == 4
+
+
+async def test_variable_set_refused_by_terminal():
+    """A terminal refusing to create sets marks them as unsupported."""
+    http = MagicMock()
+    http.delete_request = AsyncMock()
+    http.put_request = AsyncMock(
+        side_effect=ClientResponseError(MagicMock(), (), status=404)
+    )
+    variable_set = VariableSet("haset", ["/112/10021/0/0/12112"])
+
+    with pytest.raises(VariableSetUnsupportedError):
+        await variable_set.read(http)
+    assert variable_set.supported is False
+
+
+def test_variable_set_name_must_be_alphanumeric():
+    """The spec restricts set names to [a-zA-Z0-9]+."""
+    with pytest.raises(ValueError):
+        VariableSet("ha_set", [])

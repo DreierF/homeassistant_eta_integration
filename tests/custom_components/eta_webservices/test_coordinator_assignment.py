@@ -70,15 +70,18 @@ def _make_api_mock(float_dict, text_dict, writable_dict, switch_dict):
         if isinstance(info.get("valid_values"), dict)
     }
 
-    mock_api = AsyncMock()
-    mock_api.get_all_data = AsyncMock(
-        side_effect=lambda q: {
-            uri: uri_to_value[uri] for uri in q if uri in uri_to_value
+    def get_all_data(queries, variable_set=None):
+        # Switches are queried for their raw value
+        return {
+            uri: uri_to_switch.get(uri, 1802)
+            if handling.get("raw_value")
+            else uri_to_value[uri]
+            for uri, handling in queries.items()
+            if uri in uri_to_value or handling.get("raw_value")
         }
-    )
-    mock_api.get_all_switch_states = AsyncMock(
-        side_effect=lambda uris: {uri: uri_to_switch.get(uri, 1802) for uri in uris}
-    )
+
+    mock_api = AsyncMock()
+    mock_api.get_all_data = AsyncMock(side_effect=get_all_data)
     mock_api.get_errors = AsyncMock(return_value=[])
     return mock_api
 

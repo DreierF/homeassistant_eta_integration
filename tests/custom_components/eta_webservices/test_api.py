@@ -1866,56 +1866,7 @@ async def test_get_errors_handles_exceptions():
 
 
 @pytest.mark.asyncio
-async def test_get_switch_state_returns_integer():
-    """Test that get_switch_state returns the switch state as an integer.
-
-    This test verifies:
-    - Switch state is fetched from correct endpoint
-    - Returns integer value (like 1802 or 1803)
-    """
-    mock_session = AsyncMock(spec=ClientSession)
-    api = EtaAPI(mock_session, "192.168.0.1", 8080)
-
-    switch_xml = (
-        '<?xml version="1.0" encoding="utf-8"?>'
-        '<eta version="1.0" xmlns="http://www.eta.co.at/rest/v1">'
-        '<value uri="/user/var/120/10101/0/0/12080" strValue="Ein" '
-        'unit="" decPlaces="0" scaleFactor="1" advTextOffset="0">1803</value>'
-        "</eta>"
-    )
-
-    async def mock_get_request(suffix):
-        response = AsyncMock()
-        response.text = AsyncMock(return_value=switch_xml)
-        return response
-
-    api._http.get_request = mock_get_request
-
-    result = await api.get_switch_state("/120/10101/0/0/12080")
-
-    assert isinstance(result, int), "Should return an integer"
-    assert result == 1803, "Should return the switch state value"
-
-
 @pytest.mark.asyncio
-async def test_get_switch_state_handles_exceptions():
-    """Test that get_switch_state handles exceptions from _get_request.
-
-    This test verifies:
-    - Exceptions from _get_request propagate to caller
-    """
-    mock_session = AsyncMock(spec=ClientSession)
-    api = EtaAPI(mock_session, "192.168.0.1", 8080)
-
-    async def mock_get_request(suffix):
-        raise ClientError("Connection failed")
-
-    api._http.get_request = mock_get_request
-
-    with pytest.raises(ClientError):
-        await api.get_switch_state("/120/10101/0/0/12080")
-
-
 @pytest.mark.asyncio
 async def test_set_switch_state_sends_correct_data():
     """Test that set_switch_state sends the correct data to the endpoint.
@@ -2250,24 +2201,6 @@ async def test_write_endpoint_with_empty_payload():
 
 
 @pytest.mark.asyncio
-async def test_get_all_switch_states_handles_exceptions():
-    """Test that get_all_switch_states maps results and keeps exceptions per endpoint."""
-    mock_session = AsyncMock(spec=ClientSession)
-    api = EtaAPI(mock_session, "192.168.0.1", 8080, max_concurrent_requests=2)
-
-    async def mock_get_switch_state(uri):
-        if uri.endswith("/ok"):
-            return 1803
-        raise RuntimeError("switch read failed")
-
-    api.get_switch_state = mock_get_switch_state
-
-    results = await api.get_all_switch_states(["/120/1/ok", "/120/1/fail"])
-
-    assert results["/120/1/ok"] == 1803
-    assert isinstance(results["/120/1/fail"], RuntimeError)
-
-
 @pytest.mark.asyncio
 async def test_api_client_get_request_calls_correct_url():
     """Test that get_request builds the correct URL and calls session.get.

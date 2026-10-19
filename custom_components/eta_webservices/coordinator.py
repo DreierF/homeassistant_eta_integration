@@ -14,6 +14,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
+from ._api.variable_set import VariableSet
 from .api import EtaAPI, ETAEndpoint, ETAError
 from .const import (
     CHOSEN_FLOAT_SENSORS,
@@ -28,6 +29,7 @@ from .const import (
     CUSTOM_UNITS,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    ENTRY_ID,
     FLOAT_DICT,
     LAST_COORDINATOR_WARNING_TIMESTAMP,
     MAX_PARALLEL_REQUESTS,
@@ -66,6 +68,7 @@ class EtaBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         self.session = async_get_clientsession(hass)
         self.max_parallel_requests = int(config.get(MAX_PARALLEL_REQUESTS, 5))
         self.request_semaphore = config.get(REQUEST_SEMAPHORE)
+        self.variable_set: VariableSet | None = None
 
         super().__init__(
             hass,
@@ -77,6 +80,23 @@ class EtaBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
             ),
             config_entry=config_entry,
         )
+
+    def _create_variable_set(self, kind: str, uris: list[str]) -> VariableSet | None:
+        """Create the variable set this coordinator reads its values with.
+
+        The name contains the config entry, so that HA instances sharing a
+        terminal don't overwrite each other's sets.
+        """
+        if not uris:
+            return None
+        suffix = "".join(c for c in self.config.get(ENTRY_ID, "") if c.isalnum())
+        return VariableSet(f"ha{kind}{suffix[-8:].lower()}", uris)
+
+    async def async_shutdown(self) -> None:
+        """Delete the variable set when the config entry is unloaded."""
+        await super().async_shutdown()
+        if self.variable_set is not None and self.variable_set.supported:
+            await self._create_eta_client().delete_variable_set(self.variable_set)
 
     def _create_eta_client(self):
         return EtaAPI(
@@ -165,7 +185,17 @@ class ETASensorUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str | bool
         self.switch_queries: dict[str, tuple[str, int, int]] = {}
         self._build_queries()
 
+        # Multiple entities can point to the same URI; query each endpoint only once.
+        self.uri_queries: dict[str, dict[str, bool]] = {}
+        for uri, force_string_handling in self.sensor_queries.values():
+            self.uri_queries.setdefault(uri, {})
+            if force_string_handling:
+                self.uri_queries[uri]["force_string_handling"] = True
+        for uri, _, _ in self.switch_queries.values():
+            self.uri_queries[uri] = {"raw_value": True}
+
         super().__init__(hass, config, config_entry, interval_factor=1)
+        self.variable_set = self._create_variable_set("s", list(self.uri_queries))
 
     def _build_queries(self) -> None:
         # Exclude float sensors that are also writable, they are handled by writable coordinator.
@@ -230,35 +260,19 @@ class ETASensorUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str | bool
         eta_client = self._create_eta_client()
         data: dict[str, float | str | bool] = {}
 
-        uri_sensor_queries: dict[str, dict[str, bool]] = {}
-        # Multiple entities can point to the same URI; query each endpoint only once.
-        for uri, force_string_handling in self.sensor_queries.values():
-            if uri not in uri_sensor_queries:
-                uri_sensor_queries[uri] = {}
-            if force_string_handling:
-                uri_sensor_queries[uri]["force_string_handling"] = True
-
         async with timeout(REQUEST_TIMEOUT):
-            if uri_sensor_queries:
-                data = await eta_client.get_all_data(uri_sensor_queries)
+            if self.uri_queries:
+                data = await eta_client.get_all_data(
+                    self.uri_queries, variable_set=self.variable_set
+                )
 
-            if self.switch_queries:
-                unique_switch_uris = list(
-                    # Query shared switch URIs only once
-                    dict.fromkeys([uri for uri, _, _ in self.switch_queries.values()])
-                )
-                all_switch_states = await eta_client.get_all_switch_states(
-                    unique_switch_uris
-                )
-                for uri, on_value, _ in self.switch_queries.values():
-                    result = all_switch_states.get(uri)
-                    if result is None or isinstance(result, BaseException):
-                        continue
-                    data[uri] = int(result) == on_value
+        for uri, on_value, _ in self.switch_queries.values():
+            if uri in data:
+                data[uri] = int(data[uri]) == on_value
 
         # Single variables may fail, but no values at all means the terminal is
         # unreachable or broken and the entities should become unavailable.
-        if (uri_sensor_queries or self.switch_queries) and not data:
+        if self.uri_queries and not data:
             raise UpdateFailed("The ETA terminal did not return any values")
 
         elapsed = time.monotonic() - start_time
@@ -289,8 +303,13 @@ class ETAWritableUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str]]):
         """Initialize."""
         self.chosen_writable_sensors: list[str] = config[CHOSEN_WRITABLE_SENSORS]
         self.all_writable_sensors: dict[str, ETAEndpoint] = config[WRITABLE_DICT]
+        self.uri_queries: dict[str, dict[str, bool]] = {
+            self.all_writable_sensors[sensor]["url"]: {}
+            for sensor in self.chosen_writable_sensors
+        }
 
         super().__init__(hass, config, config_entry, interval_factor=1)
+        self.variable_set = self._create_variable_set("w", list(self.uri_queries))
 
     def _should_force_number_handling(self, unit):
         return unit == CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT
@@ -305,13 +324,10 @@ class ETAWritableUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str]]):
         start_time = time.monotonic()
 
         eta_client = self._create_eta_client()
-        sensor_list = {
-            self.all_writable_sensors[sensor]["url"]: {}
-            for sensor in self.chosen_writable_sensors
-        }
-
-        data = await eta_client.get_all_data(sensor_list)
-        if sensor_list and not data:
+        data = await eta_client.get_all_data(
+            self.uri_queries, variable_set=self.variable_set
+        )
+        if self.uri_queries and not data:
             raise UpdateFailed("The ETA terminal did not return any values")
         elapsed = time.monotonic() - start_time
         if (
