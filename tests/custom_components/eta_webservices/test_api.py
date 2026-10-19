@@ -2,11 +2,14 @@
 
 import asyncio
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from aiohttp import ClientSession, ClientError, ClientResponseError
 
 from custom_components.eta_webservices.api import EtaAPI
-from custom_components.eta_webservices._api.api_client import APIClient
+from custom_components.eta_webservices._api.api_client import (
+    REQUEST_TIMEOUT,
+    APIClient,
+)
 
 
 @pytest.mark.asyncio
@@ -2086,7 +2089,7 @@ async def test_set_switch_state_handles_exceptions():
     """Test that set_switch_state handles exceptions from _post_request.
 
     This test verifies:
-    - Exceptions from _post_request propagate to caller
+    - Connection errors are logged and reported as a failed write
     """
     mock_session = AsyncMock(spec=ClientSession)
     api = EtaAPI(mock_session, "192.168.0.1", 8080)
@@ -2096,9 +2099,24 @@ async def test_set_switch_state_handles_exceptions():
 
     api._http.post_request = mock_post_request
 
-    # Should raise the exception
-    with pytest.raises(ClientError):
-        await api.set_switch_state("/120/10101/0/0/12080", 1803)
+    assert await api.set_switch_state("/120/10101/0/0/12080", 1803) is False
+
+
+@pytest.mark.asyncio
+async def test_write_endpoint_handles_non_xml_response():
+    """An HTML error page is a failed write, not an XML parser crash."""
+    mock_session = AsyncMock(spec=ClientSession)
+    api = EtaAPI(mock_session, "192.168.0.1", 8080)
+
+    async def mock_post_request(suffix, data):
+        response = AsyncMock()
+        response.status = 500
+        response.text = AsyncMock(return_value="<html><body>Error</body>")
+        return response
+
+    api._http.post_request = mock_post_request
+
+    assert await api.write_endpoint("/120/10101/0/0/12132", value=300) is False
 
 
 @pytest.mark.asyncio
@@ -2188,7 +2206,7 @@ async def test_write_endpoint_handles_exceptions():
     """Test that write_endpoint handles exceptions from _post_request.
 
     This test verifies:
-    - Exceptions from _post_request propagate to caller
+    - Connection errors are logged and reported as a failed write
     """
     mock_session = AsyncMock(spec=ClientSession)
     api = EtaAPI(mock_session, "192.168.0.1", 8080)
@@ -2198,9 +2216,7 @@ async def test_write_endpoint_handles_exceptions():
 
     api._http.post_request = mock_post_request
 
-    # Should raise the exception
-    with pytest.raises(ClientError):
-        await api.write_endpoint("/120/10101/0/0/12132", value=300)
+    assert await api.write_endpoint("/120/10101/0/0/12132", value=300) is False
 
 
 @pytest.mark.asyncio
@@ -2261,14 +2277,32 @@ async def test_api_client_get_request_calls_correct_url():
     - session.get is called with that URL
     """
     mock_session = AsyncMock(spec=ClientSession)
-    mock_response = AsyncMock()
+    mock_response = MagicMock()
     mock_session.get = AsyncMock(return_value=mock_response)
 
     client = APIClient(mock_session, "192.168.0.1", 8080)
     result = await client.get_request("/user/menu")
 
-    mock_session.get.assert_called_once_with("http://192.168.0.1:8080/user/menu")
+    mock_session.get.assert_called_once_with(
+        "http://192.168.0.1:8080/user/menu", timeout=REQUEST_TIMEOUT
+    )
+    mock_response.raise_for_status.assert_called_once_with()
     assert result is mock_response
+
+
+@pytest.mark.asyncio
+async def test_api_client_get_request_raises_for_error_status():
+    """An error page must not be handed to the XML parser."""
+    mock_session = AsyncMock(spec=ClientSession)
+    mock_response = MagicMock()
+    mock_response.raise_for_status.side_effect = ClientResponseError(
+        request_info=MagicMock(), history=(), status=500, message="Server Error"
+    )
+    mock_session.get = AsyncMock(return_value=mock_response)
+
+    client = APIClient(mock_session, "192.168.0.1", 8080)
+    with pytest.raises(ClientResponseError):
+        await client.get_request("/user/menu")
 
 
 @pytest.mark.asyncio
@@ -2288,7 +2322,9 @@ async def test_api_client_post_request_calls_correct_url_and_data():
     result = await client.post_request("/user/var/120/10101/0/0/12080", payload)
 
     mock_session.post.assert_called_once_with(
-        "http://192.168.0.1:8080/user/var/120/10101/0/0/12080", data=payload
+        "http://192.168.0.1:8080/user/var/120/10101/0/0/12080",
+        data=payload,
+        timeout=REQUEST_TIMEOUT,
     )
     assert result is mock_response
 
@@ -2313,7 +2349,7 @@ async def test_api_client_get_request_enforces_semaphore_limit():
         observed_max = max(observed_max, current_concurrent)
         await asyncio.sleep(0.02)
         current_concurrent -= 1
-        return AsyncMock()
+        return MagicMock()
 
     mock_session.get = slow_get
 
@@ -2348,7 +2384,7 @@ async def test_api_client_post_request_enforces_semaphore_limit():
         observed_max = max(observed_max, current_concurrent)
         await asyncio.sleep(0.02)
         current_concurrent -= 1
-        return AsyncMock()
+        return MagicMock()
 
     mock_session.post = slow_post
 
@@ -2386,7 +2422,7 @@ async def test_api_client_get_and_post_share_semaphore():
         observed_max = max(observed_max, current_concurrent)
         await asyncio.sleep(0.02)
         current_concurrent -= 1
-        return AsyncMock()
+        return MagicMock()
 
     async def slow_post(url, **kwargs):
         nonlocal current_concurrent, observed_max
@@ -2394,7 +2430,7 @@ async def test_api_client_get_and_post_share_semaphore():
         observed_max = max(observed_max, current_concurrent)
         await asyncio.sleep(0.02)
         current_concurrent -= 1
-        return AsyncMock()
+        return MagicMock()
 
     mock_session.get = slow_get
     mock_session.post = slow_post

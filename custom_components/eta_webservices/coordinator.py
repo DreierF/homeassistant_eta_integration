@@ -12,7 +12,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .api import EtaAPI, ETAEndpoint, ETAError
 from .const import (
@@ -256,6 +256,11 @@ class ETASensorUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str | bool
                         continue
                     data[uri] = int(result) == on_value
 
+        # Single variables may fail, but no values at all means the terminal is
+        # unreachable or broken and the entities should become unavailable.
+        if (uri_sensor_queries or self.switch_queries) and not data:
+            raise UpdateFailed("The ETA terminal did not return any values")
+
         elapsed = time.monotonic() - start_time
         if (
             self.update_interval
@@ -306,6 +311,8 @@ class ETAWritableUpdateCoordinator(EtaBaseCoordinator[dict[str, float | str]]):
         }
 
         data = await eta_client.get_all_data(sensor_list)
+        if sensor_list and not data:
+            raise UpdateFailed("The ETA terminal did not return any values")
         elapsed = time.monotonic() - start_time
         if (
             self.update_interval

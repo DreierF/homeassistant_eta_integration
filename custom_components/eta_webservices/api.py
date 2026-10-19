@@ -7,8 +7,9 @@ version detection and routing to the appropriate sensor discovery implementation
 import asyncio
 from collections.abc import Callable
 import logging
+from xml.parsers.expat import ExpatError
 
-from aiohttp import ClientSession
+from aiohttp import ClientError, ClientSession
 from packaging import version
 import xmltodict
 
@@ -241,21 +242,7 @@ class EtaAPI:
         :return: True on success, False on failure
         :rtype: boolean
         """
-        data = {"value": state}
-        response = await self._http.post_request(resource_path("/user/var", uri), data)
-        text = await response.text()
-        parsed = xmltodict.parse(text)
-
-        # Check if response contains success element
-        if "success" in parsed.get("eta", {}):
-            return True
-
-        _LOGGER.error(
-            "ETA Integration - could not set state of switch. Got invalid result: %s",
-            text,
-        )
-
-        return False
+        return await self.write_endpoint(uri, state)
 
     async def write_endpoint(
         self,
@@ -280,23 +267,37 @@ class EtaAPI:
             data["begin"] = begin
         if end is not None:
             data["end"] = end
-        response = await self._http.post_request(resource_path("/user/var", uri), data)
-        text = await response.text()
-        parsed = xmltodict.parse(text)
+        try:
+            response = await self._http.post_request(
+                resource_path("/user/var", uri), data
+            )
+            text = await response.text()
+        except (ClientError, TimeoutError) as err:
+            _LOGGER.error(
+                "ETA Integration - could not write value to endpoint %s: %r", uri, err
+            )
+            return False
+        try:
+            eta = xmltodict.parse(text).get("eta") or {}
+        except ExpatError:
+            eta = {}
 
         # Check if response contains success element (not error or invalid)
-        if "success" in parsed.get("eta", {}):
+        if "success" in eta:
             return True
 
-        if "error" in parsed.get("eta", {}):
+        if "error" in eta:
             _LOGGER.error(
-                "ETA Integration - could not set write value to endpoint. Terminal returned: %s",
-                parsed["eta"]["error"],
+                "ETA Integration - could not write value to endpoint %s. Terminal returned: %s",
+                uri,
+                eta["error"],
             )
             return False
 
         _LOGGER.error(
-            "ETA Integration - could not set write value to endpoint. Got invalid result: %s",
+            "ETA Integration - could not write value to endpoint %s. Got HTTP status %s with invalid result: %s",
+            uri,
+            response.status,
             text,
         )
         return False

@@ -5,12 +5,17 @@ from datetime import datetime
 import logging
 from typing import Any
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
 import xmltodict
 
 from .types import FLOAT_SENSOR_UNITS, ETAError
 
 _LOGGER = logging.getLogger(__name__)
+
+# Upper bound for a single request. Without it a terminal that accepts the
+# connection but never answers blocks a service call for the session's
+# five minute default.
+REQUEST_TIMEOUT = ClientTimeout(total=30)
 
 
 def resource_path(resource: str, uri: str) -> str:
@@ -62,14 +67,28 @@ class APIClient:
         return f"http://{self._host}:{self._port}{suffix}"
 
     async def get_request(self, suffix: str):
-        """Execute GET request."""
+        """Execute GET request.
+
+        Raises aiohttp.ClientResponseError for error statuses, so callers don't
+        try to parse an error page as ETA XML.
+        """
         async with self._request_semaphore:
-            return await self._session.get(self._build_uri(suffix))
+            response = await self._session.get(
+                self._build_uri(suffix), timeout=REQUEST_TIMEOUT
+            )
+        response.raise_for_status()
+        return response
 
     async def post_request(self, suffix: str, data: dict):
-        """Execute POST request."""
+        """Execute POST request.
+
+        The status is not checked because the terminal reports failed writes
+        as <error> elements, which the caller logs.
+        """
         async with self._request_semaphore:
-            return await self._session.post(self._build_uri(suffix), data=data)
+            return await self._session.post(
+                self._build_uri(suffix), data=data, timeout=REQUEST_TIMEOUT
+            )
 
     def _evaluate_xml_dict(self, xml_dict, uri_dict: dict, prefix: str = ""):
         """Recursively evaluate XML dictionary and extract URIs."""

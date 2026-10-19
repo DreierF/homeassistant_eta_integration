@@ -7,6 +7,7 @@ import logging
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .api import ETAEndpoint
@@ -68,15 +69,19 @@ class EtaSwitch(EtaEntity, SwitchEntity, CoordinatorEntity[ETASensorUpdateCoordi
     async def async_turn_on(self, **kwargs):
         """Turn the switch on."""
         eta_client = self._create_eta_client()
-        res = await eta_client.set_switch_state(self.uri, self.on_value)
-        if res:
-            self._attr_is_on = True
-            self.async_write_ha_state()
+        if not await eta_client.set_switch_state(self.uri, self.on_value):
+            raise HomeAssistantError(
+                f"Could not switch {self.entity_id} on, see log for details"
+            )
+        self._attr_is_on = True
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs):
         """Turn the switch off."""
         eta_client = self._create_eta_client()
-        res = await eta_client.set_switch_state(self.uri, self.off_value)
-        if res:
-            self._attr_is_on = False
-            self.async_write_ha_state()
+        if not await eta_client.set_switch_state(self.uri, self.off_value):
+            raise HomeAssistantError(
+                f"Could not switch {self.entity_id} off, see log for details"
+            )
+        self._attr_is_on = False
+        self.async_write_ha_state()

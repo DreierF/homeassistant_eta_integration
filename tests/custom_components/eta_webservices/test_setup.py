@@ -264,3 +264,25 @@ async def test_same_system_cannot_be_added_twice(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_setup_retries_when_terminal_returns_no_values(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Setup is retried instead of creating entities without any values."""
+    base = "http://192.168.0.10:8080"
+    aioclient_mock.get(f"{base}/user/errors", text=f"<eta {NS}><errors/></eta>")
+    aioclient_mock.get(f"{base}/user/var{TEMP_URI}", status=500)
+    aioclient_mock.get(f"{base}/user/var{SLOT_URI}", status=500)
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data=_entry_data("192.168.0.10"),
+        unique_id="192.168.0.10:8080",
+        version=EtaFlowHandler.VERSION,
+    )
+    entry.add_to_hass(hass)
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert entry.state is ConfigEntryState.SETUP_RETRY
