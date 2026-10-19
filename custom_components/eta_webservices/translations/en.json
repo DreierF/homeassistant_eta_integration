@@ -160,34 +160,20 @@
             }
         },
         "write_timeslot": {
-            "name": "Update a timeslot",
-            "description": "Update the begin and end of a timeslot endpoint",
+            "name": "Update a time slot",
+            "description": "Updates the begin, end and, for time slots with a target temperature, the temperature of a writable time slot. Times are rounded to the nearest quarter hour; use 23:59 for midnight at the end of the day.",
             "fields": {
                 "begin": {
                     "name": "Begin",
-                    "description": "The start time of the timeslot"
+                    "description": "The start time of the time slot"
                 },
                 "end": {
                     "name": "End",
-                    "description": "The end time of the timeslot"
-                }
-            }
-        },
-        "write_timeslot_plus_temperature": {
-            "name": "Update a timeslot and its target temperature",
-            "description": "Update the begin, end and temperature of a timeslot endpoint",
-            "fields": {
-                "begin": {
-                    "name": "Begin",
-                    "description": "The start time of the timeslot"
-                },
-                "end": {
-                    "name": "End",
-                    "description": "The end time of the timeslot"
+                    "description": "The end time of the time slot"
                 },
                 "temperature": {
                     "name": "Temperature",
-                    "description": "The target temperature within the timeslot"
+                    "description": "The target temperature within the time slot. Required for time slots with a temperature, not allowed for others."
                 }
             }
         }

@@ -13,11 +13,13 @@ from custom_components.eta_webservices._api.sensor_discovery_v12 import (
 )
 from custom_components.eta_webservices.api import EtaAPI
 from custom_components.eta_webservices.const import (
+    CUSTOM_UNIT_TIMESLOT,
     CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
     ENTRY_ID,
 )
 from custom_components.eta_webservices.number import EtaWritableNumberSensor
 from custom_components.eta_webservices.sensor import EtaTimeslotSensor
+from homeassistant.exceptions import ServiceValidationError
 
 NS = 'xmlns="http://www.eta.co.at/rest/v1"'
 
@@ -139,8 +141,7 @@ async def test_number_writes_raw_values(hass, endpoint_type, value, expected):
     assert type(written) is type(expected)
 
 
-async def test_timeslot_write_with_zero_degrees(hass):
-    """0 °C is a temperature and must be sent as value=0, not omitted."""
+def _timeslot_sensor(hass, unit: str, writable: bool = True) -> EtaTimeslotSensor:
     coordinator = MagicMock()
     coordinator.data = {"/120/10111/12130/0/1082": "00:00 - 12:00 40"}
     coordinator.async_refresh = AsyncMock()
@@ -158,16 +159,70 @@ async def test_timeslot_write_with_zero_degrees(hass):
                 "dec_places": 1,
             },
             "friendly_name": "Boiler > Charging times",
-            "unit": CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
+            "unit": unit,
             "endpoint_type": "TIMESLOT",
         },
         coordinator,
-        should_activate_service=True,
+        writable=writable,
     )
     client = MagicMock()
     client.write_endpoint = AsyncMock(return_value=True)
     sensor._create_eta_client = MagicMock(return_value=client)
+    return sensor
 
-    await sensor.async_update_timeslot_service(time(0, 0), time(12, 0), 0.0)
 
-    client.write_endpoint.assert_awaited_once_with("/120/10111/12130/0/1082", 0, 0, 48)
+async def test_timeslot_write_with_zero_degrees(hass):
+    """0 °C is a temperature and must be sent as value=0, not omitted."""
+    sensor = _timeslot_sensor(hass, CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE)
+
+    await sensor.async_write_timeslot(time(0, 0), time(12, 0), 0.0)
+
+    sensor._create_eta_client().write_endpoint.assert_awaited_once_with(
+        "/120/10111/12130/0/1082", 0, 0, 48
+    )
+
+
+async def test_timeslot_write_with_temperature(hass):
+    """The temperature is sent as raw value, 23:59 ends the slot at midnight."""
+    sensor = _timeslot_sensor(hass, CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE)
+
+    await sensor.async_write_timeslot(time(6, 15), time(23, 59), 55.0)
+
+    sensor._create_eta_client().write_endpoint.assert_awaited_once_with(
+        "/120/10111/12130/0/1082", 550, 25, 96
+    )
+
+
+async def test_plain_timeslot_write_sends_value(hass):
+    """The spec requires value, begin and end for every time slot write."""
+    sensor = _timeslot_sensor(hass, CUSTOM_UNIT_TIMESLOT)
+
+    await sensor.async_write_timeslot(time(15, 0), time(22, 0))
+
+    sensor._create_eta_client().write_endpoint.assert_awaited_once_with(
+        "/120/10111/12130/0/1082", 0, 60, 88
+    )
+
+
+@pytest.mark.parametrize(
+    ("unit", "writable", "begin", "end", "temperature"),
+    [
+        # Not selected as writable
+        (CUSTOM_UNIT_TIMESLOT, False, time(6, 0), time(8, 0), None),
+        # Temperature missing or superfluous
+        (CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE, True, time(6, 0), time(8, 0), None),
+        (CUSTOM_UNIT_TIMESLOT, True, time(6, 0), time(8, 0), 50.0),
+        # Temperature out of range
+        (CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE, True, time(6, 0), time(8, 0), 95.0),
+        # Begin after end
+        (CUSTOM_UNIT_TIMESLOT, True, time(8, 0), time(6, 0), None),
+    ],
+)
+async def test_invalid_timeslot_writes(hass, unit, writable, begin, end, temperature):
+    """Invalid service calls are rejected without contacting the terminal."""
+    sensor = _timeslot_sensor(hass, unit, writable)
+
+    with pytest.raises(ServiceValidationError):
+        await sensor.async_write_timeslot(begin, end, temperature)
+
+    sensor._create_eta_client().write_endpoint.assert_not_awaited()

@@ -24,7 +24,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.entity_platform import async_get_current_platform
 from homeassistant.helpers.typing import VolDictType
@@ -41,8 +41,6 @@ from .const import (
     ERROR_UPDATE_COORDINATOR,
     FLOAT_DICT,
     SENSOR_UPDATE_COORDINATOR,
-    SUPPORT_WRITE_TIMESLOT,
-    SUPPORT_WRITE_TIMESLOT_WITH_TEMPERATURE,
     TEXT_DICT,
     WRITABLE_DICT,
     WRITABLE_UPDATE_COORDINATOR,
@@ -60,13 +58,12 @@ _LOGGER = logging.getLogger(__name__)
 WRITE_TIMESLOT_SCHEMA: VolDictType = {
     vol.Required("begin"): cv.time,
     vol.Required("end"): cv.time,
+    vol.Optional("temperature"): vol.Coerce(float),
 }
 
-WRITE_TIMESLOT_PLUS_TEMPERATURE_SCHEMA: VolDictType = {
-    vol.Required("temperature"): vol.Number(),
-    vol.Required("begin"): cv.time,
-    vol.Required("end"): cv.time,
-}
+# Plain time slots report a raw value of 0. The spec requires a value on every
+# time slot write, so this is sent back unchanged.
+PLAIN_TIMESLOT_RAW_VALUE = 0
 
 
 def _deduplicate_entities_by_unique_id(
@@ -157,7 +154,7 @@ async def async_setup_entry(
                 entity,
                 config[TEXT_DICT][entity],
                 sensor_coordinator,
-                should_activate_service=False,
+                writable=False,
                 should_be_disabled=entity + "_writable" in chosen_writable_sensors,
             )
             for entity in chosen_text_sensors
@@ -167,7 +164,7 @@ async def async_setup_entry(
     )
     # then add the writable timeslot sensors
     # These share the same implementation as the text timeslot sensors above,
-    # but the entities set their supported features so they can be used in the service call
+    # but accept the write_timeslot service call
     sensors.extend(
         [
             EtaTimeslotSensor(
@@ -176,7 +173,7 @@ async def async_setup_entry(
                 entity,
                 config[WRITABLE_DICT][entity],
                 sensor_coordinator,
-                should_activate_service=True,
+                writable=True,
             )
             for entity in chosen_writable_sensors
             if config[WRITABLE_DICT][entity]["unit"]
@@ -195,31 +192,10 @@ async def async_setup_entry(
     sensors = _deduplicate_entities_by_unique_id(sensors)  # pyright: ignore[reportArgumentType]
     async_add_entities(sensors, update_before_add=False)
 
-    # activate the service for all selected writable sensors with the unit CUSTOM_UNIT_TIMESLOT
-    if any(
-        config[WRITABLE_DICT][entity]["unit"] == CUSTOM_UNIT_TIMESLOT
-        for entity in chosen_writable_sensors
-    ):
-        platform = async_get_current_platform()
-        platform.async_register_entity_service(
-            "write_timeslot",
-            WRITE_TIMESLOT_SCHEMA,
-            "async_update_timeslot_service",
-            required_features=[SUPPORT_WRITE_TIMESLOT],
-        )
-
-    # activate the service for all selected writable sensors with the unit CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE
-    if any(
-        config[WRITABLE_DICT][entity]["unit"] == CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE
-        for entity in chosen_writable_sensors
-    ):
-        platform = async_get_current_platform()
-        platform.async_register_entity_service(
-            "write_timeslot_plus_temperature",
-            WRITE_TIMESLOT_PLUS_TEMPERATURE_SCHEMA,
-            "async_update_timeslot_service",
-            required_features=[SUPPORT_WRITE_TIMESLOT_WITH_TEMPERATURE],
-        )
+    platform = async_get_current_platform()
+    platform.async_register_entity_service(
+        "write_timeslot", WRITE_TIMESLOT_SCHEMA, "async_write_timeslot"
+    )
 
 
 def _determine_device_class(unit):
@@ -343,7 +319,7 @@ class EtaTimeslotSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
         unique_id: str,
         endpoint_info: ETAEndpoint,
         coordinator: ETASensorUpdateCoordinator,
-        should_activate_service: bool,
+        writable: bool,
         should_be_disabled: bool = False,
     ) -> None:
         _LOGGER.debug("ETA Integration - init timeslot sensor")
@@ -351,6 +327,10 @@ class EtaTimeslotSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
         self.temperature_unit = "°C"
         super().__init__(coordinator, config, hass, unique_id, endpoint_info)
         self.valid_values: ETAValidWritableValues = endpoint_info["valid_values"]  # pyright: ignore[reportAttributeAccessIssue]
+        self.writable = writable
+        self.has_temperature = (
+            endpoint_info["unit"] == CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE
+        )
 
         if should_be_disabled:
             entity_registry = er.async_get(hass)
@@ -360,69 +340,48 @@ class EtaTimeslotSensor(SensorEntity, EtaCoordinatedSensorEntity[str]):
             )
             self._attr_entity_registry_enabled_default = False
 
-        # Set supported features based on unit type and writability
-        if should_activate_service:
-            if endpoint_info["unit"] == CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE:
-                self._attr_supported_features = SUPPORT_WRITE_TIMESLOT_WITH_TEMPERATURE
-            elif endpoint_info["unit"] == CUSTOM_UNIT_TIMESLOT:
-                self._attr_supported_features = SUPPORT_WRITE_TIMESLOT
-            else:
-                self._attr_supported_features = 0
-        else:
-            self._attr_supported_features = 0
-
-    async def async_update_timeslot_service(
+    async def async_write_timeslot(
         self, begin: time, end: time, temperature: float | None = None
     ) -> None:
-        """Handle the write_timeslot service call."""
-        # If a temperature is provided validate that the entity supports it
-        if temperature is not None and not (
-            self._attr_supported_features
-            and (
-                self._attr_supported_features & SUPPORT_WRITE_TIMESLOT_WITH_TEMPERATURE
+        """Handle the write_timeslot service call.
+
+        Times are rounded to the nearest quarter hour, so 23:59 ends the slot at
+        midnight.
+        """
+        if not self.writable:
+            raise ServiceValidationError(
+                f"{self.entity_id} is not selected as a writable time slot"
             )
-        ):
-            # We should not get here, but it's better to be safe than sorry
-            raise HomeAssistantError(
-                f"Entity {self.entity_id} does not support setting the temperature for the timeslot"
+        if self.has_temperature and temperature is None:
+            raise ServiceValidationError(
+                f"{self.entity_id} needs a temperature for the time slot"
             )
-        if (
-            self._attr_supported_features
-            and (
-                self._attr_supported_features & SUPPORT_WRITE_TIMESLOT_WITH_TEMPERATURE
-            )
-            and temperature is None
-        ):
-            raise HomeAssistantError(
-                f"Entity {self.entity_id} needs a temperature for the timeslot"
+        if not self.has_temperature and temperature is not None:
+            raise ServiceValidationError(
+                f"{self.entity_id} has no temperature for the time slot"
             )
 
-        raw_value = None
+        raw_value = PLAIN_TIMESLOT_RAW_VALUE
         # 0 °C is a valid temperature, so test against None
         if temperature is not None:
-            raw_value = round(
-                round(temperature, self.valid_values["dec_places"])
-                * self.valid_values["scale_factor"]
-            )
             if (
                 temperature < self.valid_values["scaled_min_value"]
                 or temperature > self.valid_values["scaled_max_value"]
             ):
-                raise HomeAssistantError(
+                raise ServiceValidationError(
                     f"Temperature value out of bounds for entity {self.entity_id}"
                 )
+            raw_value = round(
+                round(temperature, self.valid_values["dec_places"])
+                * self.valid_values["scale_factor"]
+            )
 
         raw_begin = round((begin.hour * 60 + begin.minute) / 15)
         raw_end = round((end.hour * 60 + end.minute) / 15)
-
-        if (
-            raw_begin < 0
-            or raw_begin > 24 * 60 / 15
-            or raw_end < 0
-            or raw_end > 24 * 60 / 15
-            or raw_begin > raw_end
-        ):
-            raise HomeAssistantError(f"Invalid timeslot for entity {self.entity_id}")
+        if raw_begin > raw_end:
+            raise ServiceValidationError(
+                f"Invalid timeslot for entity {self.entity_id}: begin is after end"
+            )
 
         eta_client = self._create_eta_client()
         success = await eta_client.write_endpoint(

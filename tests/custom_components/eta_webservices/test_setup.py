@@ -29,6 +29,8 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 NS = 'xmlns="http://www.eta.co.at/rest/v1"'
 TEMP_URI = "/120/10601/0/0/12197"
 TEMP_KEY = "120_10601_0_0_12197"
+SLOT_URI = "/120/10111/12130/0/1082"
+SLOT_KEY = "120_10111_12130_0_1082_writable"
 
 
 def _entry_data(host: str) -> dict:
@@ -48,12 +50,26 @@ def _entry_data(host: str) -> dict:
         },
         SWITCHES_DICT: {},
         TEXT_DICT: {},
-        WRITABLE_DICT: {},
+        WRITABLE_DICT: {
+            SLOT_KEY: {
+                "url": SLOT_URI,
+                "value": "15:30 - 18:00 55",
+                "valid_values": {
+                    "scaled_min_value": 0.0,
+                    "scaled_max_value": 90.0,
+                    "scale_factor": 10,
+                    "dec_places": 0,
+                },
+                "friendly_name": "Warmwasserspeicher > Ladezeiten > Montag > Zeitfenster 1",
+                "unit": "timeslot_plus_temperature",
+                "endpoint_type": "TIMESLOT",
+            }
+        },
         PENDING_DICT: {},
         CHOSEN_FLOAT_SENSORS: [TEMP_KEY],
         CHOSEN_SWITCHES: [],
         CHOSEN_TEXT_SENSORS: [],
-        CHOSEN_WRITABLE_SENSORS: [],
+        CHOSEN_WRITABLE_SENSORS: [SLOT_KEY],
         CHOSEN_PENDING_SENSORS: [],
     }
 
@@ -66,6 +82,22 @@ def _mock_eta(aioclient_mock: AiohttpClientMocker, host: str) -> None:
             f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
             f'<value uri="/user/var{TEMP_URI}" strValue="12,5" unit="°C" '
             'decPlaces="1" scaleFactor="10" advTextOffset="0">125</value></eta>'
+        ),
+    )
+    aioclient_mock.get(
+        f"{base}/user/var{SLOT_URI}",
+        text=(
+            f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+            f'<value uri="/user/var{SLOT_URI}" strValue="15:30 - 18:00 55" '
+            'unit="°C" decPlaces="0" scaleFactor="10" advTextOffset="0">0</value>'
+            "</eta>"
+        ),
+    )
+    aioclient_mock.post(
+        f"{base}/user/var{SLOT_URI}",
+        text=(
+            f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+            f'<success uri="/user/var{SLOT_URI}"/></eta>'
         ),
     )
     aioclient_mock.get(
@@ -189,6 +221,30 @@ async def test_write_value_multiple_entries(
     assert [str(call[1]) for call in post_calls] == [
         "http://192.168.0.11:8080/user/var/120/10021/0/0/12080"
     ]
+
+
+async def test_write_timeslot(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """The write_timeslot service posts value, begin and end to the slot."""
+    _mock_eta(aioclient_mock, "192.168.0.10")
+    entry = await _setup_entry(hass, "192.168.0.10")
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "sensor", DOMAIN, f"{entry.entry_id}_{SLOT_KEY}"
+    )
+    assert hass.states.get(entity_id).state == "15:30 - 18:00: 55 °C"
+
+    await hass.services.async_call(
+        DOMAIN,
+        "write_timeslot",
+        {"entity_id": entity_id, "begin": "06:00", "end": "08:30", "temperature": 50},
+        blocking=True,
+    )
+
+    post_calls = [call for call in aioclient_mock.mock_calls if call[0] == "POST"]
+    assert len(post_calls) == 1
+    assert str(post_calls[0][1]).endswith(f"/user/var{SLOT_URI}")
+    assert post_calls[0][2] == {"value": 500, "begin": 24, "end": 34}
 
 
 async def test_same_system_cannot_be_added_twice(

@@ -172,7 +172,7 @@ def test_eta_timeslot_sensor_clears_value_when_key_missing(hass: HomeAssistant):
             _UNIQUE_ID,
             _make_float_endpoint(unit=CUSTOM_UNIT_TIMESLOT),
             coordinator,
-            should_activate_service=False,
+            writable=False,
         )
 
     assert entity._attr_native_value is not None

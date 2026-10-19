@@ -160,34 +160,20 @@
             }
         },
         "write_timeslot": {
-            "name": "Aktualisiere eine Zeitspanne",
-            "description": "Setze die Startzeit und Endzeit eines Zeitspannen-Endpunkts",
+            "name": "Zeitfenster aktualisieren",
+            "description": "Setzt Beginn, Ende und, bei Zeitfenstern mit Zieltemperatur, die Temperatur eines schreibbaren Zeitfensters. Zeiten werden auf die nächste Viertelstunde gerundet; 23:59 steht für Mitternacht am Ende des Tages.",
             "fields": {
                 "begin": {
                     "name": "Beginn",
-                    "description": "Die Startzeit der Zeitspanne"
+                    "description": "Die Startzeit des Zeitfensters"
                 },
                 "end": {
                     "name": "Ende",
-                    "description": "Die Endzeit der Zeitspanne"
-                }
-            }
-        },
-        "write_timeslot_plus_temperature": {
-            "name": "Aktualisiere eine Zeitspanne und die Zieltemperatur",
-            "description": "Setze die Startzeit, Endzeit und Zieltemperatur eines Zeitspannen-Endpunkts",
-            "fields": {
-                "begin": {
-                    "name": "Beginn",
-                    "description": "Die Startzeit der Zeitspanne"
-                },
-                "end": {
-                    "name": "Ende",
-                    "description": "Die Endzeit der Zeitspanne"
+                    "description": "Die Endzeit des Zeitfensters"
                 },
                 "temperature": {
                     "name": "Temperatur",
-                    "description": "Die Zieltemperatur innerhalb der Zeitspanne"
+                    "description": "Die Zieltemperatur innerhalb des Zeitfensters. Erforderlich bei Zeitfenstern mit Temperatur, sonst nicht erlaubt."
                 }
             }
         }
