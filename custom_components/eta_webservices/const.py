@@ -2,7 +2,6 @@
 
 NAME = "eta_webservices"
 DOMAIN = "eta_webservices"
-ISSUE_URL = "https://github.com/Tidone/homeassistant_eta_integration/issues"
 
 
 FLOAT_DICT = "FLOAT_DICT"
@@ -74,13 +73,3 @@ DEFAULT_UPDATE_INTERVAL = 60  # seconds
 COORDINATOR_WARNING_INTERVAL = (
     30 * 60
 )  # seconds between coordinator performance warnings
-
-
-STARTUP_MESSAGE = f"""
--------------------------------------------------------------------
-{NAME}
-This is a custom integration!
-If you have any issues with this you need to open an issue here:
-{ISSUE_URL}
--------------------------------------------------------------------
-"""
