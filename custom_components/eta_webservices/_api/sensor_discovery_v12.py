@@ -7,6 +7,7 @@ import xmltodict
 
 from ..const import (  # noqa: TID252
     CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT,
+    CUSTOM_UNIT_SELECT,
     CUSTOM_UNIT_TIMESLOT,
     CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
     CUSTOM_UNIT_UNITLESS,
@@ -21,6 +22,11 @@ _LOGGER = logging.getLogger(__name__)
 
 class SensorDiscoveryV12(SensorDiscoveryBase):
     """ETA API v1.2 specific sensor discovery implementation."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # URIs whose varinfo reports isWritable="1"
+        self._writable_uris: set[str] = set()
 
     def _is_switch(
         self, endpoint_info: ETAEndpoint, raw_value: str | None = None
@@ -52,6 +58,18 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
             elif key in ("Aus", "Off", "Nein", "No"):
                 valid_values["off_value"] = endpoint_info["valid_values"][key]
         endpoint_info["valid_values"] = valid_values
+
+    def _is_select(self, endpoint_info: ETAEndpoint) -> bool:
+        """Check if endpoint is a writable variable with named values."""
+        valid_values = endpoint_info["valid_values"]
+        return (
+            endpoint_info["url"] in self._writable_uris
+            and endpoint_info["endpoint_type"] == "TEXT"
+            and isinstance(valid_values, dict)
+            and len(valid_values) > 0
+            and "scaled_min_value" not in valid_values
+            and not self._is_switch(endpoint_info)
+        )
 
     def _is_writable(self, endpoint_info: ETAEndpoint) -> bool:
         """Check if endpoint is writable (v1.2 method)."""
@@ -126,6 +144,8 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
     def _parse_varinfo(self, data, fub: str, uri: str):
         """Parse varinfo XML response."""
         _LOGGER.debug("Parsing varinfo %s", data)
+        if data.get("@isWritable") == "1":
+            self._writable_uris.add(uri)
         valid_values = None
         unit = self._parse_unit(data)
         if (
@@ -530,6 +550,12 @@ class SensorDiscoveryV12(SensorDiscoveryBase):
                         )
                     else:
                         writable_dict[writable_key] = endpoint_info
+                elif self._is_select(endpoint_info):
+                    _LOGGER.debug("Adding %s as select", uri)
+                    # The text sensor keeps the terminal's unit, so use a copy
+                    writable_dict[unique_key + "_writable"] = ETAEndpoint(
+                        **{**endpoint_info, "unit": CUSTOM_UNIT_SELECT}
+                    )
 
                 if self._is_float_sensor(endpoint_info):
                     _LOGGER.debug("Adding %s as float sensor", uri)

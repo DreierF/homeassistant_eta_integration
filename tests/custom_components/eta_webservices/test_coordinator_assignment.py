@@ -22,6 +22,9 @@ from custom_components.eta_webservices.sensor import (
 from custom_components.eta_webservices.switch import (
     async_setup_entry as switch_async_setup_entry,
 )
+from custom_components.eta_webservices.select import (
+    async_setup_entry as select_async_setup_entry,
+)
 from custom_components.eta_webservices.time import (
     async_setup_entry as time_async_setup_entry,
 )
@@ -178,6 +181,7 @@ async def _run_test(
         await number_async_setup_entry(hass, config_entry, add_entities)
         await sensor_async_setup_entry(hass, config_entry, add_entities)
         await time_async_setup_entry(hass, config_entry, add_entities)
+        await select_async_setup_entry(hass, config_entry, add_entities)
         await switch_async_setup_entry(hass, config_entry, add_entities)
 
     return all_entities, sensor_coordinator, writable_coordinator, error_coordinator

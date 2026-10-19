@@ -34,6 +34,8 @@ TEMP_URI = "/120/10601/0/0/12197"
 TEMP_KEY = "120_10601_0_0_12197"
 SLOT_URI = "/120/10111/12130/0/1082"
 SLOT_KEY = "120_10111_12130_0_1082_writable"
+SELECT_URI = "/40/10211/0/0/12262"
+SELECT_KEY = "40_10211_0_0_12262_writable"
 
 
 def _entry_data(host: str) -> dict:
@@ -66,13 +68,21 @@ def _entry_data(host: str) -> dict:
                 "friendly_name": "Warmwasserspeicher > Ladezeiten > Montag > Zeitfenster 1",
                 "unit": "timeslot_plus_temperature",
                 "endpoint_type": "TIMESLOT",
-            }
+            },
+            SELECT_KEY: {
+                "url": SELECT_URI,
+                "value": "Frei",
+                "valid_values": {"Frei": 1804, "Gesperrt": 1805},
+                "friendly_name": "LagerUm. > Sonstiges > Position 1",
+                "unit": "select",
+                "endpoint_type": "TEXT",
+            },
         },
         PENDING_DICT: {},
         CHOSEN_FLOAT_SENSORS: [TEMP_KEY],
         CHOSEN_SWITCHES: [],
         CHOSEN_TEXT_SENSORS: [],
-        CHOSEN_WRITABLE_SENSORS: [SLOT_KEY],
+        CHOSEN_WRITABLE_SENSORS: [SLOT_KEY, SELECT_KEY],
         CHOSEN_PENDING_SENSORS: [],
     }
 
@@ -94,6 +104,8 @@ def _mock_eta(
                 'decPlaces="1" scaleFactor="10" advTextOffset="0">135</variable>'
                 f'<variable uri="{SLOT_URI.lstrip("/")}" strValue="15:30 - 18:00 55" '
                 'unit="°C" decPlaces="0" scaleFactor="10" advTextOffset="0">0'
+                f'</variable><variable uri="{SELECT_URI.lstrip("/")}" strValue="Frei" '
+                'unit="" decPlaces="0" scaleFactor="1" advTextOffset="1804">1804'
                 "</variable></vars></eta>"
             ),
         )
@@ -122,6 +134,21 @@ def _mock_eta(
         text=(
             f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
             f'<success uri="/user/var{SLOT_URI}"/></eta>'
+        ),
+    )
+    aioclient_mock.get(
+        f"{base}/user/var{SELECT_URI}",
+        text=(
+            f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+            f'<value uri="/user/var{SELECT_URI}" strValue="Frei" unit="" '
+            'decPlaces="0" scaleFactor="1" advTextOffset="1804">1804</value></eta>'
+        ),
+    )
+    aioclient_mock.post(
+        f"{base}/user/var{SELECT_URI}",
+        text=(
+            f'<?xml version="1.0" encoding="utf-8"?><eta version="1.0" {NS}>'
+            f'<success uri="/user/var{SELECT_URI}"/></eta>'
         ),
     )
     aioclient_mock.get(
@@ -299,6 +326,32 @@ async def test_write_timeslot(
     assert post_calls[0][2] == {"value": 500, "begin": 24, "end": 34}
 
 
+async def test_select_option(
+    hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
+) -> None:
+    """Selecting an option writes its raw value."""
+    _mock_eta(aioclient_mock, "192.168.0.10")
+    entry = await _setup_entry(hass, "192.168.0.10")
+    entity_id = er.async_get(hass).async_get_entity_id(
+        "select", DOMAIN, f"{entry.entry_id}_{SELECT_KEY}"
+    )
+    state = hass.states.get(entity_id)
+    assert state.state == "Frei"
+    assert state.attributes["options"] == ["Frei", "Gesperrt"]
+
+    await hass.services.async_call(
+        "select",
+        "select_option",
+        {"entity_id": entity_id, "option": "Gesperrt"},
+        blocking=True,
+    )
+
+    post_calls = [call for call in aioclient_mock.mock_calls if call[0] == "POST"]
+    assert len(post_calls) == 1
+    assert str(post_calls[0][1]).endswith(f"/user/var{SELECT_URI}")
+    assert post_calls[0][2] == {"value": 1805}
+
+
 async def test_same_system_cannot_be_added_twice(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
@@ -329,6 +382,7 @@ async def test_setup_retries_when_terminal_returns_no_values(
         aioclient_mock.request(method, vars_url, status=500)
     aioclient_mock.get(f"{base}/user/var{TEMP_URI}", status=500)
     aioclient_mock.get(f"{base}/user/var{SLOT_URI}", status=500)
+    aioclient_mock.get(f"{base}/user/var{SELECT_URI}", status=500)
     entry = MockConfigEntry(
         domain=DOMAIN,
         data=_entry_data("192.168.0.10"),

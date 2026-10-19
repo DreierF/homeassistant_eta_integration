@@ -40,11 +40,14 @@ CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT = "minutes_since_midnight"
 CUSTOM_UNIT_TIMESLOT = "timeslot"
 CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE = "timeslot_plus_temperature"
 CUSTOM_UNIT_UNITLESS = "unitless"
+# Writable variables with named values, e.g. "Frei" and "Gesperrt"
+CUSTOM_UNIT_SELECT = "select"
 CUSTOM_UNITS = [
     CUSTOM_UNIT_MINUTES_SINCE_MIDNIGHT,
     CUSTOM_UNIT_TIMESLOT,
     CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
     CUSTOM_UNIT_UNITLESS,
+    CUSTOM_UNIT_SELECT,
 ]
 
 # Internal units which should not be shown to the user
@@ -53,6 +56,7 @@ INVISIBLE_UNITS = [
     CUSTOM_UNIT_TIMESLOT,
     CUSTOM_UNIT_TIMESLOT_PLUS_TEMPERATURE,
     CUSTOM_UNIT_UNITLESS,
+    CUSTOM_UNIT_SELECT,
 ]
 
 ENTRY_ID = "entry_id"

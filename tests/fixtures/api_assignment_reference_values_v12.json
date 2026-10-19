@@ -5247,6 +5247,21 @@
     }
   },
   "writable_dict": {
+    "120_10111_0_11129_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "WW > Eingänge > Warmwasserspeicher > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10111/0/11129/2011",
+      "value": "Pt1000"
+    },
     "120_10111_0_11129_2049_writable": {
       "valid_values": {
         "scaled_min_value": -5.0,
@@ -5728,6 +5743,19 @@
       "url": "/120/10111/0/0/13535",
       "value": 5.0
     },
+    "120_10111_0_0_12932_writable": {
+      "valid_values": {
+        "Nein": 6530,
+        "mit jedem Erzeuger": 6531,
+        "nur mit Stückholzkessel": 6532,
+        "nicht mit Brenner": 6533
+      },
+      "friendly_name": "WW > Warmwasserspeicher > Laden mit Erzeuger",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10111/0/0/12932",
+      "value": "xxx"
+    },
     "120_10111_0_0_13039_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -5740,6 +5768,18 @@
       "endpoint_type": "DEFAULT",
       "url": "/120/10111/0/0/13039",
       "value": 0.0
+    },
+    "120_10101_0_0_12476_writable": {
+      "valid_values": {
+        "Fussbodenheizung": 1806,
+        "Radiatorenheizung": 1807,
+        "Allgemein": 1808
+      },
+      "friendly_name": "HK > Heizkreistyp",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10101/0/0/12476",
+      "value": "Allgemein"
     },
     "120_10101_12113_0_1082_writable": {
       "valid_values": {
@@ -6079,6 +6119,17 @@
       "url": "/120/10101/0/0/12107",
       "value": 3.0
     },
+    "120_10101_0_0_14052_writable": {
+      "valid_values": {
+        "Abschalten": 6080,
+        "Vorlauf Min halten": 6081
+      },
+      "friendly_name": "HK > Heizkreis > Heizkurve > bei niedriger Heizkurve",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10101/0/0/14052",
+      "value": "Abschalten"
+    },
     "120_10101_0_0_14133_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -6195,6 +6246,45 @@
       "endpoint_type": "DEFAULT",
       "url": "/120/10101/0/0/14688",
       "value": 0.0
+    },
+    "120_10101_0_0_14686_writable": {
+      "valid_values": {
+        "ausschalten": 6610,
+        "Automatikbetrieb": 6611,
+        "Absenkbetrieb": 6612
+      },
+      "friendly_name": "HK > Heizkreis > Estrich > am Ende",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10101/0/0/14686",
+      "value": "Automatikbetrieb"
+    },
+    "120_10102_0_0_12476_writable": {
+      "valid_values": {
+        "Fussbodenheizung": 1806,
+        "Radiatorenheizung": 1807,
+        "Allgemein": 1808
+      },
+      "friendly_name": "Fbh > Heizkreistyp",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10102/0/0/12476",
+      "value": "Fussbodenheizung"
+    },
+    "120_10102_0_11060_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Fbh > Eingänge > Vorlauf > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10102/0/11060/2011",
+      "value": "Pt1000"
     },
     "120_10102_0_11060_2049_writable": {
       "valid_values": {
@@ -6560,6 +6650,17 @@
       "url": "/120/10102/0/0/12107",
       "value": 3.0
     },
+    "120_10102_0_0_14052_writable": {
+      "valid_values": {
+        "Abschalten": 6080,
+        "Vorlauf Min halten": 6081
+      },
+      "friendly_name": "Fbh > Heizkreis > Heizkurve > bei niedriger Heizkurve",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10102/0/0/14052",
+      "value": "Abschalten"
+    },
     "120_10102_0_0_14133_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -6716,6 +6817,33 @@
       "url": "/120/10102/0/0/14688",
       "value": 0.0
     },
+    "120_10102_0_0_14686_writable": {
+      "valid_values": {
+        "ausschalten": 6610,
+        "Automatikbetrieb": 6611,
+        "Absenkbetrieb": 6612
+      },
+      "friendly_name": "Fbh > Heizkreis > Estrich > am Ende",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10102/0/0/14686",
+      "value": "Automatikbetrieb"
+    },
+    "120_10241_0_11127_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Sys > Außentemperatur > Außentemperaturfühler > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10241/0/11127/2011",
+      "value": "Pt1000 Außenfühler"
+    },
     "120_10241_0_11127_2049_writable": {
       "valid_values": {
         "scaled_min_value": -5.0,
@@ -6742,6 +6870,57 @@
       "url": "/120/10241/0/11127/2054",
       "value": -5.0
     },
+    "120_10241_0_0_13353_writable": {
+      "valid_values": {
+        "Meldung": 3250,
+        "Warnung": 3251,
+        "Fehler": 3252,
+        "Alarm": 3253
+      },
+      "friendly_name": "Sys > Störmeldung > ab Priorität",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10241/0/0/13353",
+      "value": "xxx"
+    },
+    "120_10241_0_0_14261_writable": {
+      "valid_values": {
+        "Fehler": 1050,
+        "OK": 1051
+      },
+      "friendly_name": "Sys > Externe Störmeldung > Externe Störmeldung von Schnittstellen",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10241/0/0/14261",
+      "value": "xxx"
+    },
+    "120_10241_0_0_14242_writable": {
+      "valid_values": {
+        "fix": 6360,
+        "einstellbar": 6361
+      },
+      "friendly_name": "Sys > Antiblockierschutz > Zeitpunkt",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10241/0/0/14242",
+      "value": "fix"
+    },
+    "120_10241_0_0_14243_writable": {
+      "valid_values": {
+        "Sonntag": 6350,
+        "Montag": 6351,
+        "Dienstag": 6352,
+        "Mittwoch": 6353,
+        "Donnerstag": 6354,
+        "Freitag": 6355,
+        "Samstag": 6356
+      },
+      "friendly_name": "Sys > Antiblockierschutz > an welchem Tag?",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/120/10241/0/0/14243",
+      "value": "xxx"
+    },
     "120_10241_0_0_14244_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -6754,6 +6933,99 @@
       "endpoint_type": "DEFAULT",
       "url": "/120/10241/0/0/14244",
       "value": "xxx"
+    },
+    "40_10021_0_11031_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > Wassermangel > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11031/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11032_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > Not-Aus Schalter > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11032/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11033_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > STB > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11033/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11034_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > Aschebox > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11034/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11036_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > Glutbett > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11036/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11037_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "Kessel > Eingänge > Pelletsbehälter > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11037/2017",
+      "value": "xxx"
+    },
+    "40_10021_0_11108_2011_writable": {
+      "valid_values": {
+        "LSU4": 1121,
+        "HuS 118": 1122,
+        "NGK ZFAS": 1123
+      },
+      "friendly_name": "Kessel > Eingänge > Restsauerstoff > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11108/2011",
+      "value": "HuS 118"
+    },
+    "40_10021_0_11109_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Kessel > Eingänge > Kessel > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11109/2011",
+      "value": "Pt1000"
     },
     "40_10021_0_11109_2049_writable": {
       "valid_values": {
@@ -6781,6 +7053,21 @@
       "url": "/40/10021/0/11109/2054",
       "value": 70.0
     },
+    "40_10021_0_11058_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Kessel > Eingänge > Kessel Vorlauf 1 > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11058/2011",
+      "value": "Pt1000"
+    },
     "40_10021_0_11058_2049_writable": {
       "valid_values": {
         "scaled_min_value": -5.0,
@@ -6807,6 +7094,21 @@
       "url": "/40/10021/0/11058/2054",
       "value": 60.0
     },
+    "40_10021_0_11122_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Kessel > Eingänge > Kessel unten > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11122/2011",
+      "value": "Pt1000"
+    },
     "40_10021_0_11122_2049_writable": {
       "valid_values": {
         "scaled_min_value": -5.0,
@@ -6832,6 +7134,21 @@
       "endpoint_type": "DEFAULT",
       "url": "/40/10021/0/11122/2054",
       "value": 55.0
+    },
+    "40_10021_0_11110_2011_writable": {
+      "valid_values": {
+        "Pt1000": 1111,
+        "Pt1000 Abgasfühler": 1112,
+        "Pt1000 Außenfühler": 1113,
+        "KTY": 1114,
+        "KTY Außenfühler": 1115,
+        "Analoger Raumfühler": 1116
+      },
+      "friendly_name": "Kessel > Eingänge > Abgas > Sensor Typ",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11110/2011",
+      "value": "Pt1000 Abgasfühler"
     },
     "40_10021_0_11110_2049_writable": {
       "valid_values": {
@@ -6872,6 +7189,17 @@
       "url": "/40/10021/0/11030/2102",
       "value": 3.0
     },
+    "40_10021_0_11120_2133_writable": {
+      "valid_values": {
+        "Phasenanschnitt": 1270,
+        "Pulspaket": 1271
+      },
+      "friendly_name": "Kessel > Ausgänge > Abgasgebläse > Abgasgebläse > Drehzahlsteuerung",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11120/2133",
+      "value": "Phasenanschnitt"
+    },
     "264_10891_0_0_14005_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -6884,6 +7212,21 @@
       "endpoint_type": "IEEE-754",
       "url": "/264/10891/0/0/14005",
       "value": 0.51
+    },
+    "40_10021_0_11123_2133_writable": {
+      "valid_values": {
+        "Ein/Aus": 1280,
+        "Pulspaket für NICHT elektronisch geregelte Pumpe": 1281,
+        "Laing/Lowara Kesselpumpe für PU/PC": 1282,
+        "Heizungspumpe (siehe Infotaste!)": 1283,
+        "Solarpumpe (siehe Infotaste!)": 1284,
+        "0-10V analog": 1285
+      },
+      "friendly_name": "Kessel > Ausgänge > Kesselpumpe > Drehzahlsteuerung",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/11123/2133",
+      "value": "Heizungspumpe (siehe Infotaste!)"
     },
     "40_10021_0_0_12011_writable": {
       "valid_values": {
@@ -6988,6 +7331,30 @@
       "endpoint_type": "DEFAULT",
       "url": "/40/10021/0/0/12024",
       "value": 80.0
+    },
+    "40_10021_0_0_12116_writable": {
+      "valid_values": {
+        "Nennlast": 1960,
+        "Teillast": 1961,
+        "Kombination": 1962
+      },
+      "friendly_name": "Kessel > Kessel > Abgas > Emissionsmessung > Art der Messung",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/0/12116",
+      "value": "Nennlast"
+    },
+    "40_10021_0_0_13269_writable": {
+      "valid_values": {
+        "Nein": 3930,
+        "Ja, zuerst Entaschen": 3931,
+        "Ja, gleich Messen": 3932
+      },
+      "friendly_name": "Kessel > Kessel > Abgas > Emissionsmessung > Jetzt starten",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/0/13269",
+      "value": "Nein"
     },
     "40_10021_12004_0_1051_writable": {
       "valid_values": {
@@ -7119,6 +7486,55 @@
       "url": "/40/10021/0/0/12152",
       "value": "19:00"
     },
+    "40_10021_0_0_13353_writable": {
+      "valid_values": {
+        "Meldung": 3250,
+        "Warnung": 3251,
+        "Fehler": 3252
+      },
+      "friendly_name": "Kessel > Kessel > Kesselstörmeldung > ab Priorität",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/0/13353",
+      "value": "xxx"
+    },
+    "40_10021_0_0_13161_writable": {
+      "valid_values": {
+        "Abgasgebläse ein": 3000,
+        "Brennstoffförderung ein": 3001,
+        "Ein/Aus Taste ein": 3002,
+        "Kesselzustand ist Heizen": 3003
+      },
+      "friendly_name": "Kessel > Kessel > Kessellaufmeldung > Aktiv wenn",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10021/0/0/13161",
+      "value": "Abgasgebläse ein"
+    },
+    "40_10211_0_0_13986_writable": {
+      "valid_values": {
+        "3-fach": 6001,
+        "4-fach": 6002,
+        "8-fach linear": 6003,
+        "8-fach drehend": 6004
+      },
+      "friendly_name": "LagerUm. > Typ der Umschalteinheit",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/13986",
+      "value": "4-fach"
+    },
+    "40_10211_0_11133_2017_writable": {
+      "valid_values": {
+        "Nicht invertiert": 3450,
+        "Invertiert": 3451
+      },
+      "friendly_name": "LagerUm. > Eingänge > Nullpunktschalter > Eingang",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/11133/2017",
+      "value": "xxx"
+    },
     "40_10211_0_0_12148_writable": {
       "valid_values": {
         "scaled_min_value": 0.0,
@@ -7157,6 +7573,94 @@
       "endpoint_type": "DEFAULT",
       "url": "/40/10211/0/0/12042",
       "value": 1000.0
+    },
+    "40_10211_0_0_12262_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 1",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12262",
+      "value": "Frei"
+    },
+    "40_10211_0_0_12263_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 2",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12263",
+      "value": "Frei"
+    },
+    "40_10211_0_0_12264_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 3",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12264",
+      "value": "Frei"
+    },
+    "40_10211_0_0_12539_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 4",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12539",
+      "value": "Frei"
+    },
+    "40_10211_0_0_12879_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 5",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12879",
+      "value": "xxx"
+    },
+    "40_10211_0_0_12880_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 6",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12880",
+      "value": "xxx"
+    },
+    "40_10211_0_0_12881_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 7",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12881",
+      "value": "xxx"
+    },
+    "40_10211_0_0_12882_writable": {
+      "valid_values": {
+        "Frei": 1804,
+        "Gesperrt": 1805
+      },
+      "friendly_name": "LagerUm. > Sonstiges > Position 8",
+      "unit": "select",
+      "endpoint_type": "TEXT",
+      "url": "/40/10211/0/0/12882",
+      "value": "xxx"
     }
   }
 }

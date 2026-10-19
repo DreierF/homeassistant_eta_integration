@@ -17,6 +17,9 @@ from custom_components.eta_webservices.sensor import (
     _coerce_numeric_value,
     async_setup_entry as sensor_async_setup_entry,
 )
+from custom_components.eta_webservices.select import (
+    async_setup_entry as select_async_setup_entry,
+)
 from custom_components.eta_webservices.time import (
     async_setup_entry as time_async_setup_entry,
 )
@@ -68,6 +71,7 @@ async def test_all_writable_sensors_handled(hass: HomeAssistant, load_fixture):
     - number.py handles regular units (°C, %, s, W, …) and 'unitless'
     - time.py handles 'minutes_since_midnight'
     - sensor.py handles 'timeslot' and 'timeslot_plus_temperature'
+    - select.py handles 'select'
     - switch.py handles CHOSEN_SWITCHES (not writable sensors)
 
     sensor.py always adds 2 extra error sensors (EtaNbrErrorsSensor,
@@ -135,6 +139,7 @@ async def test_all_writable_sensors_handled(hass: HomeAssistant, load_fixture):
         await number_async_setup_entry(hass, config_entry, add_entities)
         await sensor_async_setup_entry(hass, config_entry, add_entities)
         await time_async_setup_entry(hass, config_entry, add_entities)
+        await select_async_setup_entry(hass, config_entry, add_entities)
         await switch_async_setup_entry(hass, config_entry, add_entities)
 
     # Every writable sensor produces exactly one entity across all platforms,
@@ -206,6 +211,7 @@ async def test_all_non_writable_sensors_handled(hass: HomeAssistant, load_fixtur
         await number_async_setup_entry(hass, config_entry, add_entities)
         await sensor_async_setup_entry(hass, config_entry, add_entities)
         await time_async_setup_entry(hass, config_entry, add_entities)
+        await select_async_setup_entry(hass, config_entry, add_entities)
         await switch_async_setup_entry(hass, config_entry, add_entities)
 
     # Every non-writable sensor produces exactly one entity across all platforms,
@@ -296,6 +302,7 @@ async def test_all_writable_and_non_writable_sensors_handled(
         await number_async_setup_entry(hass, config_entry, add_entities)
         await sensor_async_setup_entry(hass, config_entry, add_entities)
         await time_async_setup_entry(hass, config_entry, add_entities)
+        await select_async_setup_entry(hass, config_entry, add_entities)
         await switch_async_setup_entry(hass, config_entry, add_entities)
 
     assert len(all_entities) == (
